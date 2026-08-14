@@ -1,0 +1,6 @@
+{
+  "name": "Cinestream",
+  "description": "Uma plataforma de streaming imersiva e de alta performance, projetada para cinéfilos com design cinematográfico premium e transições fluidas.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="pt-BR" class="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, viewport-fit=cover" />
+    
+    <!-- PWA Primary Identity -->
+    <title>CineStream - Filmes, Séries & Nuvem</title>
+    <meta name="description" content="Plataforma de streaming ultra rápida com catálogo completo de filmes, séries e conexão segura com Google Drive." />
+    <meta name="application-name" content="CineStream" />
+    <meta name="theme-color" content="#0F0F0F" media="(prefers-color-scheme: dark)" />
+    <meta name="theme-color" content="#0F0F0F" />
+
+    <!-- Web App Manifest -->
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="shortcut icon" href="/favicon.svg" />
+
+    <!-- Apple iOS Safari PWA Meta Tags -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="CineStream" />
+    <link rel="apple-touch-icon" href="/icons/apple-touch-icon.svg" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/icons/apple-touch-icon.svg" />
+
+    <!-- Microsoft / Windows PWA Tiles -->
+    <meta name="msapplication-TileColor" content="#0F0F0F" />
+    <meta name="msapplication-TileImage" content="/icons/icon-512.svg" />
+    <meta name="msapplication-navbutton-color" content="#0F0F0F" />
+
+    <!-- Mobile Browsers -->
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="format-detection" content="telephone=no" />
+  </head>
+  <body class="bg-[#0F0F0F] text-gray-200 antialiased overflow-x-hidden select-none">
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
+

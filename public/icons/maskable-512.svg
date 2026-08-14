@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%">
+  <defs>
+    <linearGradient id="bgMask" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#180507" />
+      <stop offset="50%" stop-color="#0F0F0F" />
+      <stop offset="100%" stop-color="#050505" />
+    </linearGradient>
+    <linearGradient id="redMask" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FF2E3B" />
+      <stop offset="50%" stop-color="#E50914" />
+      <stop offset="100%" stop-color="#8B0006" />
+    </linearGradient>
+  </defs>
+
+  <!-- Full Bleed Background for Maskable Icon Safe Zone -->
+  <rect width="512" height="512" fill="url(#bgMask)"/>
+
+  <!-- Logo Centered strictly within 80% Safe Zone -->
+  <g transform="translate(51.2, 51.2) scale(0.8)">
+    <path d="M 330 145 C 220 135 145 190 145 256 C 145 322 220 377 330 367 C 348 365 358 348 350 334 C 343 322 328 316 312 318 C 235 326 195 292 195 256 C 195 220 235 186 312 194 C 328 196 343 190 350 178 C 358 164 348 147 330 145 Z" fill="url(#redMask)"/>
+    <path d="M 235 200 L 325 256 L 235 312 Z" fill="#FFFFFF"/>
+  </g>
+</svg>
