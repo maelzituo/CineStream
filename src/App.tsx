@@ -255,7 +255,7 @@ function CineStreamApp() {
   return (
     <div className="min-h-screen bg-brand-bg text-gray-200 font-sans selection:bg-brand-red selection:text-white">
       {/* Header Principal */}
-      {!playingMovie && (
+      {showGlobalFrame && (
         <Header
           currentTab={currentTab}
           setCurrentTab={handleTabChange}

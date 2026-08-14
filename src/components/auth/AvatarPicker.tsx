@@ -5,6 +5,7 @@
 
 import { useState } from 'react';
 import { Check, Image as ImageIcon, Link2 } from 'lucide-react';
+import { handleImageError } from '../../lib/imageFallback';
 
 export const CINEMA_AVATARS = [
   {
@@ -91,6 +92,7 @@ export default function AvatarPicker({ selectedUrl, onSelect }: AvatarPickerProp
                   referrerPolicy="no-referrer"
                   src={avatar.url}
                   alt={avatar.name}
+                  onError={(e) => handleImageError(e, 'avatar')}
                   className="w-full h-full object-cover rounded-full"
                 />
                 {isSelected && (

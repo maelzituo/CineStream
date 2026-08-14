@@ -24,6 +24,7 @@ import {
 import { Movie } from '../types';
 import { MOVIES_DATABASE } from '../data/movies';
 import { db, MovieReview } from '../lib/database';
+import { handleImageError, DEFAULT_BACKDROP_FALLBACK, DEFAULT_POSTER_FALLBACK, DEFAULT_AVATAR_FALLBACK } from '../lib/imageFallback';
 import MovieRepository from '../services/movieRepository';
 import SeriesRepository from '../services/seriesRepository';
 
@@ -46,10 +47,14 @@ export default function MovieDetails({
 }: MovieDetailsProps) {
   const [movie, setMovie] = useState<Movie>(initialMovie);
   const [showTrailerModal, setShowTrailerModal] = useState(false);
+  const [backdropSrc, setBackdropSrc] = useState(
+    initialMovie.backdropUrl || initialMovie.imageUrl || DEFAULT_BACKDROP_FALLBACK
+  );
 
   // Carrega informações estendidas do TMDb (elenco, diretor, trailer, recomendações) se disponível
   useEffect(() => {
     setMovie(initialMovie);
+    setBackdropSrc(initialMovie.backdropUrl || initialMovie.imageUrl || DEFAULT_BACKDROP_FALLBACK);
     window.scrollTo({ top: 0, behavior: 'smooth' });
 
     let isMounted = true;
@@ -63,10 +68,12 @@ export default function MovieDetails({
             setMovie((prev) => ({
               ...prev,
               ...fullData,
-              // Mantém poster e backdrop se a requisição estendida não tiver
               imageUrl: fullData.imageUrl || prev.imageUrl,
               backdropUrl: fullData.backdropUrl || prev.backdropUrl,
             }));
+            if (fullData.backdropUrl) {
+              setBackdropSrc(fullData.backdropUrl);
+            }
           }
         } catch (e) {
           console.warn('Erro ao carregar detalhes estendidos do TMDb:', e);
@@ -107,7 +114,7 @@ export default function MovieDetails({
       setSubmittingReview(true);
       
       let userName = 'Usuário Premium';
-      let userAvatar = 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=185&auto=format&fit=crop&q=80';
+      let userAvatar = DEFAULT_AVATAR_FALLBACK;
 
       const cachedProfile = localStorage.getItem('cinestream_profile');
       if (cachedProfile) {
@@ -151,15 +158,19 @@ export default function MovieDetails({
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       transition={{ duration: 0.4 }}
-      className="min-h-screen bg-[#0F0F0F] pb-24 text-gray-200 select-none"
+      className="min-h-screen bg-[#0F0F0F] pb-28 text-gray-200 select-none"
     >
       {/* Hero Banner Backdrop */}
-      <section className="relative w-full h-[55vh] md:h-[70vh]">
-        <div
-          className="absolute inset-0 w-full h-full bg-cover bg-center transition-all duration-700"
-          style={{
-            backgroundImage: `url('${movie.backdropUrl || movie.imageUrl}')`,
+      <section className="relative w-full h-[55vh] md:h-[70vh] overflow-hidden bg-brand-bg">
+        <img
+          referrerPolicy="no-referrer"
+          src={backdropSrc}
+          alt={movie.title}
+          onError={(e) => {
+            handleImageError(e, 'backdrop');
+            setBackdropSrc(DEFAULT_BACKDROP_FALLBACK);
           }}
+          className="absolute inset-0 w-full h-full object-cover object-center filter brightness-90"
         />
         <div className="absolute inset-0 bg-gradient-to-t from-[#0F0F0F] via-[#0F0F0F]/60 to-transparent z-10" />
         <div className="absolute inset-0 bg-gradient-to-r from-[#0F0F0F]/90 via-[#0F0F0F]/40 to-transparent z-10" />
@@ -167,8 +178,9 @@ export default function MovieDetails({
         {/* Botão de Voltar */}
         <button
           onClick={onBack}
-          className="absolute top-6 left-6 z-20 w-11 h-11 rounded-full flex items-center justify-center glass-panel hover:bg-white/20 active:scale-95 transition-all text-white cursor-pointer border border-white/15 shadow-2xl"
+          className="absolute top-6 left-6 z-30 w-11 h-11 rounded-full flex items-center justify-center bg-black/70 hover:bg-brand-red active:scale-95 transition-all text-white cursor-pointer border border-white/20 shadow-2xl backdrop-blur-md"
           aria-label="Voltar"
+          id="movie-details-back-btn"
         >
           <ArrowLeft className="w-5 h-5" />
         </button>
@@ -181,11 +193,12 @@ export default function MovieDetails({
           <div className="flex-none w-44 md:w-64 aspect-[2/3] rounded-2xl overflow-hidden border-2 border-white/15 shadow-2xl bg-surface-container relative group">
             <img
               referrerPolicy="no-referrer"
-              src={movie.imageUrl}
+              src={movie.imageUrl || DEFAULT_POSTER_FALLBACK}
               alt={movie.title}
+              onError={(e) => handleImageError(e, 'poster')}
               className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
             />
-            <div className="absolute top-3 left-3 px-2.5 py-1 bg-black/70 backdrop-blur-md border border-white/10 rounded-md text-[10px] font-display font-black text-brand-red uppercase">
+            <div className="absolute top-3 left-3 px-2.5 py-1 bg-black/80 backdrop-blur-md border border-white/15 rounded-md text-[10px] font-display font-black text-brand-red uppercase">
               {movie.type === 'series' ? 'Série' : 'Filme'}
             </div>
           </div>
@@ -222,56 +235,59 @@ export default function MovieDetails({
             </div>
 
             {/* Linha de Indicadores de Metadados */}
-            <div className="flex flex-wrap items-center gap-4 text-xs md:text-sm font-sans font-medium text-gray-300">
-              <span className="flex items-center gap-1.5 text-brand-red font-extrabold bg-brand-red/10 px-2.5 py-1 rounded-md border border-brand-red/20">
+            <div className="flex flex-wrap items-center gap-3 md:gap-4 text-xs md:text-sm font-sans font-medium text-gray-300">
+              <span className="flex items-center gap-1.5 text-brand-red font-extrabold bg-brand-red/15 px-2.5 py-1 rounded-md border border-brand-red/30">
                 <Star className="w-4 h-4 fill-brand-red text-brand-red" />
                 {movie.rating.toFixed(1)} / 10
               </span>
               <span className="w-1.5 h-1.5 rounded-full bg-white/20" />
-              <span>{movie.year}</span>
+              <span className="font-bold text-white">{movie.year}</span>
               <span className="w-1.5 h-1.5 rounded-full bg-white/20" />
-              <span className="px-2 py-0.5 border border-white/20 rounded text-[10px] tracking-wider font-extrabold text-gray-300">
+              <span className="px-2 py-0.5 border border-white/30 rounded text-[10px] tracking-wider font-extrabold text-gray-200 bg-black/40">
                 {movie.ageRating}
               </span>
               <span className="w-1.5 h-1.5 rounded-full bg-white/20" />
-              <span>{movie.duration}</span>
+              <span className="font-semibold text-gray-200">{movie.duration}</span>
               <span className="w-1.5 h-1.5 rounded-full bg-white/20" />
-              <span className="text-gray-400">{movie.genres.join(', ')}</span>
+              <span className="text-gray-300">{movie.genres.join(', ')}</span>
             </div>
 
             {/* Botões de Ação Principais */}
-            <div className="flex flex-wrap items-center gap-4 pt-4">
+            <div className="flex flex-wrap items-center gap-3.5 pt-4">
               <button
                 onClick={() => onPlayClick(movie)}
-                className="bg-brand-red hover:bg-brand-red-hover text-white font-display font-black text-sm tracking-wider py-4 px-10 rounded-xl flex items-center justify-center gap-2.5 active:scale-95 hover:scale-[1.02] transition-all duration-300 shadow-xl shadow-brand-red/30 cursor-pointer"
+                className="bg-brand-red hover:bg-brand-red-hover text-white font-display font-black text-xs sm:text-sm tracking-wider py-3.5 px-8 sm:px-10 rounded-xl flex items-center justify-center gap-2.5 active:scale-95 hover:scale-[1.02] transition-all duration-300 shadow-xl shadow-brand-red/30 cursor-pointer border border-red-500/40"
+                id="details-play-button"
               >
-                <Play className="w-5 h-5 fill-white" />
-                ASSISTIR AGORA
+                <Play className="w-4.5 h-4.5 sm:w-5 sm:h-5 fill-white" />
+                <span>ASSISTIR AGORA</span>
               </button>
 
               {movie.videoUrl && (
                 <button
                   onClick={() => setShowTrailerModal(true)}
-                  className="bg-white/10 hover:bg-white/20 border border-white/15 text-white font-display font-bold text-sm tracking-wider py-4 px-8 rounded-xl flex items-center justify-center gap-2 active:scale-95 transition-all cursor-pointer"
+                  className="bg-white/10 hover:bg-white/20 border border-white/20 text-white font-display font-bold text-xs sm:text-sm tracking-wider py-3.5 px-6 sm:px-8 rounded-xl flex items-center justify-center gap-2 active:scale-95 transition-all cursor-pointer"
+                  id="details-trailer-button"
                 >
-                  <Film className="w-4.5 h-4.5 text-amber-400" />
-                  Trailer
+                  <Film className="w-4 h-4 text-amber-400" />
+                  <span>Trailer</span>
                 </button>
               )}
 
               <button
                 onClick={() => onSavedToggle(movie)}
-                className="glass-panel hover:bg-white/15 border border-white/20 text-white font-display font-bold text-sm tracking-wider py-4 px-8 rounded-xl flex items-center justify-center gap-2 active:scale-95 transition-all cursor-pointer"
+                className="bg-black/40 hover:bg-white/15 border border-white/20 text-white font-display font-bold text-xs sm:text-sm tracking-wider py-3.5 px-6 sm:px-8 rounded-xl flex items-center justify-center gap-2 active:scale-95 transition-all cursor-pointer backdrop-blur-md"
+                id="details-save-button"
               >
                 {isSaved ? (
                   <>
-                    <Check className="w-4.5 h-4.5 text-emerald-400" />
-                    Na Lista
+                    <Check className="w-4 h-4 text-emerald-400" />
+                    <span>Na Lista</span>
                   </>
                 ) : (
                   <>
-                    <Plus className="w-4.5 h-4.5" />
-                    Minha Lista
+                    <Plus className="w-4 h-4 text-white" />
+                    <span>Minha Lista</span>
                   </>
                 )}
               </button>
@@ -309,12 +325,14 @@ export default function MovieDetails({
             <div className="flex gap-6 overflow-x-auto hide-scrollbar pb-2">
               {movie.cast.map((actor) => (
                 <div key={actor.id} className="flex-none w-24 text-center group">
-                  <div className="w-20 h-20 md:w-24 md:h-24 rounded-full bg-cover bg-center border-2 border-white/15 mx-auto overflow-hidden group-hover:border-brand-red transition-all duration-300 shadow-md">
+                  <div className="w-20 h-20 md:w-24 md:h-24 rounded-full bg-surface-container border-2 border-white/15 mx-auto overflow-hidden group-hover:border-brand-red transition-all duration-300 shadow-md">
                     <img
                       referrerPolicy="no-referrer"
-                      src={actor.imageUrl}
+                      src={actor.imageUrl || DEFAULT_AVATAR_FALLBACK}
                       alt={actor.name}
+                      onError={(e) => handleImageError(e, 'avatar')}
                       className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                      loading="lazy"
                     />
                   </div>
                   <p className="mt-2.5 font-sans font-bold text-xs text-gray-200 truncate leading-tight">
@@ -349,9 +367,11 @@ export default function MovieDetails({
                   <div className="aspect-[2/3] rounded-xl overflow-hidden border border-white/10 bg-surface-container relative transition-all duration-300 group-hover:scale-105 group-hover:border-brand-red/50 group-hover:shadow-xl">
                     <img
                       referrerPolicy="no-referrer"
-                      src={similar.imageUrl}
+                      src={similar.imageUrl || DEFAULT_POSTER_FALLBACK}
                       alt={similar.title}
+                      onError={(e) => handleImageError(e, 'poster')}
                       className="w-full h-full object-cover"
+                      loading="lazy"
                     />
                     <div className="absolute bottom-2 right-2 glass-panel px-2 py-0.5 rounded text-[9px] font-extrabold tracking-widest text-white shadow">
                       {similar.rating >= 8.0 ? '★ ' + similar.rating.toFixed(1) : 'HD'}
@@ -380,7 +400,7 @@ export default function MovieDetails({
                 Comentários & Críticas
               </h3>
             </div>
-            <span className="flex items-center gap-1 text-[10px] font-mono text-gray-500 bg-white/5 border border-white/10 px-2.5 py-1 rounded">
+            <span className="flex items-center gap-1 text-[10px] font-mono text-gray-400 bg-white/5 border border-white/10 px-2.5 py-1 rounded">
               <Database className="w-3 h-3 text-brand-red" />
               {reviews.length} {reviews.length === 1 ? 'registro' : 'registros'}
             </span>
@@ -396,10 +416,10 @@ export default function MovieDetails({
                     key={num}
                     type="button"
                     onClick={() => setNewRating(num)}
-                    className={`w-8 h-8 rounded-lg font-display text-xs font-black transition-all ${
+                    className={`w-8 h-8 rounded-lg font-display text-xs font-black transition-all cursor-pointer ${
                       newRating === num
                         ? 'bg-brand-red text-white scale-110 shadow-lg shadow-brand-red/35'
-                        : 'bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white'
+                        : 'bg-white/5 hover:bg-white/15 text-gray-400 hover:text-white border border-white/5'
                     }`}
                   >
                     {num}
@@ -408,19 +428,19 @@ export default function MovieDetails({
               </div>
             </div>
 
-            <div className="flex gap-4">
+            <div className="flex gap-3">
               <input
                 type="text"
                 placeholder="Escreva seu comentário..."
                 value={newComment}
                 onChange={(e) => setNewComment(e.target.value)}
-                className="flex-1 bg-white/5 border border-white/10 hover:border-white/20 focus:border-brand-red/40 rounded-xl px-4 py-3 text-sm font-sans placeholder-gray-500 outline-none transition-all"
+                className="flex-1 bg-white/5 border border-white/10 hover:border-white/20 focus:border-brand-red/60 rounded-xl px-4 py-3 text-sm font-sans placeholder-gray-500 outline-none transition-all text-white"
                 disabled={submittingReview}
               />
               <button
                 type="submit"
                 disabled={submittingReview || !newComment.trim()}
-                className="bg-brand-red hover:bg-brand-red-hover disabled:bg-gray-800 disabled:text-gray-500 disabled:cursor-not-allowed text-white p-3.5 rounded-xl flex items-center justify-center transition-all cursor-pointer shadow-md active:scale-95"
+                className="bg-brand-red hover:bg-brand-red-hover disabled:bg-gray-800 disabled:text-gray-500 disabled:cursor-not-allowed text-white px-5 rounded-xl flex items-center justify-center transition-all cursor-pointer shadow-md active:scale-95"
               >
                 <Send className="w-4.5 h-4.5" />
               </button>
@@ -443,9 +463,10 @@ export default function MovieDetails({
                 >
                   <img
                     referrerPolicy="no-referrer"
-                    src={review.userAvatar}
+                    src={review.userAvatar || DEFAULT_AVATAR_FALLBACK}
                     alt={review.userName}
-                    className="w-10 h-10 rounded-full border border-white/10 object-cover"
+                    onError={(e) => handleImageError(e, 'avatar')}
+                    className="w-10 h-10 rounded-full border border-white/10 object-cover bg-surface-container"
                   />
                   <div className="flex-1 min-w-0 space-y-1.5">
                     <div className="flex items-center justify-between">
@@ -457,7 +478,7 @@ export default function MovieDetails({
                           {new Date(review.createdAt).toLocaleDateString('pt-BR')}
                         </span>
                       </div>
-                      <div className="flex items-center gap-1 text-xs font-black text-brand-red bg-brand-red/10 px-2 py-0.5 rounded">
+                      <div className="flex items-center gap-1 text-xs font-black text-brand-red bg-brand-red/10 px-2 py-0.5 rounded border border-brand-red/20">
                         <Star className="w-3 h-3 fill-brand-red" />
                         {review.rating}/10
                       </div>
@@ -493,7 +514,7 @@ export default function MovieDetails({
             <div className="relative w-full max-w-4xl aspect-video bg-black rounded-2xl overflow-hidden border border-white/10 shadow-2xl">
               <button
                 onClick={() => setShowTrailerModal(false)}
-                className="absolute top-4 right-4 z-20 w-10 h-10 rounded-full bg-black/70 text-white flex items-center justify-center hover:bg-brand-red transition-colors cursor-pointer"
+                className="absolute top-4 right-4 z-20 w-10 h-10 rounded-full bg-black/70 hover:bg-brand-red text-white flex items-center justify-center transition-colors cursor-pointer border border-white/20"
               >
                 <X className="w-5 h-5" />
               </button>

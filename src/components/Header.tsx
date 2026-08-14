@@ -8,6 +8,7 @@ import { Search, Film, Tv, ListCollapse, Play, Sparkles, User as UserIcon, LogIn
 import { Tab } from '../types';
 import { useAuth } from '../context/AuthContext';
 import { pwaManager } from '../lib/pwa';
+import { handleImageError, DEFAULT_AVATAR_FALLBACK } from '../lib/imageFallback';
 
 interface HeaderProps {
   currentTab: Tab;
@@ -28,14 +29,16 @@ export default function Header({
 
   useEffect(() => {
     const handleScroll = () => {
-      if (window.scrollY > 40) {
+      if (window.scrollY > 20) {
         setIsScrolled(true);
       } else {
         setIsScrolled(false);
       }
     };
 
-    window.addEventListener('scroll', handleScroll);
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    handleScroll();
+
     const cleanupPWA = pwaManager.onInstallChange((installable) => {
       setCanInstall(installable);
     });
@@ -50,79 +53,78 @@ export default function Header({
     await pwaManager.promptInstall();
   };
 
+  // Se não estiver na aba de início, o header sempre usa fundo sólido/vidro fosco para não colidir com o conteúdo
+  const isSolidHeader = isScrolled || currentTab !== 'inicio';
+
   return (
     <header
       id="main-header"
-      className={`fixed top-0 w-full z-50 transition-all duration-500 flex justify-between items-center px-6 md:px-16 h-16 ${
-        isScrolled
-          ? 'bg-brand-bg/95 backdrop-blur-md shadow-lg border-b border-white/5'
-          : 'bg-gradient-to-b from-brand-bg/90 to-transparent'
-      }`}
+      className="fixed top-0 left-0 right-0 w-full z-40 transition-all duration-300 flex justify-between items-center px-4 sm:px-8 md:px-12 h-16 md:h-18 bg-[#0F0F0F]/95 backdrop-blur-xl shadow-2xl border-b border-white/10"
     >
       {/* Brand Logo */}
       <div
-        className="flex items-center gap-2 cursor-pointer group"
+        className="flex items-center gap-2.5 cursor-pointer group select-none"
         onClick={() => setCurrentTab('inicio')}
+        id="header-brand-logo"
       >
-        <span className="relative flex h-5 w-5 items-center justify-center">
-          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-brand-red opacity-30"></span>
-          <Play className="text-brand-red fill-brand-red w-5 h-5 relative z-10 transition-transform group-hover:scale-110" />
-        </span>
-        <span className="font-display font-black text-2xl tracking-tighter text-brand-red select-none">
-          CINESTREAM
+        <div className="relative flex h-7 w-7 items-center justify-center rounded-xl bg-brand-red/10 border border-brand-red/30 group-hover:bg-brand-red/20 transition-all shadow-md shadow-brand-red/20">
+          <Play className="text-brand-red fill-brand-red w-3.5 h-3.5 ml-0.5 transition-transform group-hover:scale-110" />
+        </div>
+        <span className="font-display font-black text-xl md:text-2xl tracking-tighter text-white group-hover:text-brand-red transition-colors">
+          CINE<span className="text-brand-red">STREAM</span>
         </span>
       </div>
 
       {/* Desktop Navigation Links */}
-      <nav className="hidden md:flex gap-8 items-center font-display font-semibold text-xs tracking-widest text-on-surface-variant">
+      <nav className="hidden md:flex gap-1 lg:gap-2 items-center font-display font-bold text-xs tracking-wider">
         <button
           onClick={() => setCurrentTab('inicio')}
-          className={`hover:text-brand-red transition-all cursor-pointer ${
-            currentTab === 'inicio' ? 'text-brand-red relative' : 'text-gray-400'
+          className={`px-3.5 py-1.5 rounded-xl transition-all cursor-pointer ${
+            currentTab === 'inicio'
+              ? 'bg-brand-red/15 text-white border border-brand-red/30 font-black'
+              : 'text-gray-400 hover:text-white hover:bg-white/5'
           }`}
+          id="nav-tab-inicio"
         >
           INÍCIO
-          {currentTab === 'inicio' && (
-            <span className="absolute -bottom-1.5 left-0 right-0 h-0.5 bg-brand-red rounded-full" />
-          )}
         </button>
         <button
           onClick={() => setCurrentTab('busca')}
-          className={`hover:text-brand-red transition-all cursor-pointer ${
-            currentTab === 'busca' ? 'text-brand-red relative' : 'text-gray-400'
+          className={`px-3.5 py-1.5 rounded-xl transition-all cursor-pointer ${
+            currentTab === 'busca'
+              ? 'bg-brand-red/15 text-white border border-brand-red/30 font-black'
+              : 'text-gray-400 hover:text-white hover:bg-white/5'
           }`}
+          id="nav-tab-busca"
         >
           BUSCA
-          {currentTab === 'busca' && (
-            <span className="absolute -bottom-1.5 left-0 right-0 h-0.5 bg-brand-red rounded-full" />
-          )}
         </button>
         <button
           onClick={() => setCurrentTab('lista')}
-          className={`hover:text-brand-red transition-all cursor-pointer ${
-            currentTab === 'lista' ? 'text-brand-red relative' : 'text-gray-400'
+          className={`px-3.5 py-1.5 rounded-xl transition-all cursor-pointer ${
+            currentTab === 'lista'
+              ? 'bg-brand-red/15 text-white border border-brand-red/30 font-black'
+              : 'text-gray-400 hover:text-white hover:bg-white/5'
           }`}
+          id="nav-tab-lista"
         >
           MINHA LISTA
-          {currentTab === 'lista' && (
-            <span className="absolute -bottom-1.5 left-0 right-0 h-0.5 bg-brand-red rounded-full" />
-          )}
         </button>
         <button
           onClick={() => setCurrentTab('perfil')}
-          className={`hover:text-brand-red transition-all cursor-pointer ${
-            currentTab === 'perfil' ? 'text-brand-red relative' : 'text-gray-400'
+          className={`px-3.5 py-1.5 rounded-xl transition-all cursor-pointer ${
+            currentTab === 'perfil'
+              ? 'bg-brand-red/15 text-white border border-brand-red/30 font-black'
+              : 'text-gray-400 hover:text-white hover:bg-white/5'
           }`}
+          id="nav-tab-perfil"
         >
           PERFIL
-          {currentTab === 'perfil' && (
-            <span className="absolute -bottom-1.5 left-0 right-0 h-0.5 bg-brand-red rounded-full" />
-          )}
         </button>
       </nav>
 
       {/* Header Actions */}
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-2 sm:gap-3">
         {/* PWA Direct Install Button for Desktop / Mobile */}
         {canInstall && (
           <button
@@ -132,39 +134,49 @@ export default function Header({
             id="header-install-pwa-btn"
           >
             <Download className="w-3.5 h-3.5 text-brand-red" />
-            <span>Instalar App</span>
+            <span className="hidden lg:inline">Instalar App</span>
           </button>
         )}
 
         {/* Search Trigger */}
         <button
           onClick={onSearchClick}
-          className="p-2 rounded-full hover:bg-white/10 active:scale-95 transition-all text-gray-300 hover:text-white cursor-pointer"
+          className={`p-2 rounded-xl border transition-all cursor-pointer ${
+            currentTab === 'busca'
+              ? 'bg-brand-red text-white border-brand-red shadow-md shadow-brand-red/25'
+              : 'bg-white/5 hover:bg-white/10 text-gray-300 hover:text-white border-white/10'
+          }`}
           aria-label="Buscar"
+          id="header-search-btn"
         >
-          <Search className="w-5 h-5" />
+          <Search className="w-4.5 h-4.5" />
         </button>
 
         {/* User Auth or Profile Button */}
         {user ? (
           <button
             onClick={onProfileClick}
-            className="flex items-center gap-2 p-0.5 rounded-full border border-white/20 hover:border-brand-red active:scale-95 transition-all cursor-pointer focus:outline-none relative group"
+            className={`flex items-center gap-2 p-0.5 rounded-full border-2 transition-all cursor-pointer focus:outline-none relative group ${
+              currentTab === 'perfil' ? 'border-brand-red shadow-md shadow-brand-red/30' : 'border-white/20 hover:border-brand-red'
+            }`}
             title={user.displayName || 'Meu Perfil'}
+            id="header-profile-btn"
           >
-            <div className="w-8 h-8 rounded-full overflow-hidden relative">
+            <div className="w-8 h-8 rounded-full overflow-hidden relative bg-surface-container">
               <img
                 referrerPolicy="no-referrer"
                 className="w-full h-full object-cover transition-transform group-hover:scale-110"
                 alt={user.displayName || 'Avatar'}
-                src={user.photoURL || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=185&auto=format&fit=crop&q=80'}
+                src={user.photoURL || DEFAULT_AVATAR_FALLBACK}
+                onError={(e) => handleImageError(e, 'avatar')}
               />
             </div>
           </button>
         ) : (
           <button
             onClick={() => openAuthModal('login')}
-            className="px-4 py-2 bg-brand-red hover:bg-brand-red-hover text-white text-xs font-display font-black tracking-wider uppercase rounded-xl transition-all cursor-pointer active:scale-95 shadow-md shadow-brand-red/25 flex items-center gap-1.5"
+            className="px-3.5 py-1.5 sm:px-4 sm:py-2 bg-brand-red hover:bg-brand-red-hover text-white text-xs font-display font-black tracking-wider uppercase rounded-xl transition-all cursor-pointer active:scale-95 shadow-md shadow-brand-red/25 flex items-center gap-1.5"
+            id="header-login-btn"
           >
             <LogIn className="w-3.5 h-3.5" />
             <span>Entrar</span>

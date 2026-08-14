@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { Movie } from '../types';
 import TMDbService from '../services/tmdbService';
+import { handleImageError, DEFAULT_POSTER_FALLBACK, DEFAULT_AVATAR_FALLBACK } from '../lib/imageFallback';
 
 interface SearchProps {
   movies: Movie[];
@@ -176,12 +177,14 @@ export default function Search({ movies: initialMovies, onMovieClick }: SearchPr
               }
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              className="w-full bg-surface-container/80 border border-white/10 rounded-2xl py-4.5 pl-12 pr-12 text-sm md:text-base font-sans text-white focus:outline-none focus:border-brand-red focus:bg-surface-container transition-all shadow-inner placeholder-gray-500"
+              className="w-full bg-surface-container border border-white/10 rounded-2xl py-4 pl-12 pr-12 text-sm md:text-base font-sans text-white focus:outline-none focus:border-brand-red focus:bg-surface-container transition-all shadow-inner placeholder-gray-500"
+              id="search-input-field"
             />
             {query && (
               <button
                 onClick={() => setQuery('')}
-                className="absolute right-4 p-1.5 rounded-full bg-white/10 text-gray-400 hover:text-white cursor-pointer active:scale-90"
+                className="absolute right-4 p-2 rounded-full bg-white/10 text-gray-400 hover:text-white cursor-pointer active:scale-90 transition-all"
+                aria-label="Limpar pesquisa"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -193,22 +196,24 @@ export default function Search({ movies: initialMovies, onMovieClick }: SearchPr
             <div className="flex flex-wrap items-center gap-2">
               <button
                 onClick={() => setSearchType('all')}
-                className={`px-3.5 py-1.5 rounded-lg text-xs font-display font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
+                className={`px-4 py-2 rounded-xl text-xs font-display font-black tracking-wider flex items-center gap-1.5 transition-all cursor-pointer ${
                   searchType === 'all'
-                    ? 'bg-brand-red text-white'
-                    : 'bg-white/5 text-gray-400 hover:text-white'
+                    ? 'bg-brand-red text-white shadow-md shadow-brand-red/30'
+                    : 'bg-white/5 text-gray-400 hover:text-white hover:bg-white/10 border border-white/5'
                 }`}
+                id="search-filter-all"
               >
                 <Film className="w-3.5 h-3.5" />
                 TUDO
               </button>
               <button
                 onClick={() => setSearchType('actor')}
-                className={`px-3.5 py-1.5 rounded-lg text-xs font-display font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
+                className={`px-4 py-2 rounded-xl text-xs font-display font-black tracking-wider flex items-center gap-1.5 transition-all cursor-pointer ${
                   searchType === 'actor'
-                    ? 'bg-brand-red text-white'
-                    : 'bg-white/5 text-gray-400 hover:text-white'
+                    ? 'bg-brand-red text-white shadow-md shadow-brand-red/30'
+                    : 'bg-white/5 text-gray-400 hover:text-white hover:bg-white/10 border border-white/5'
                 }`}
+                id="search-filter-actor"
               >
                 <Users className="w-3.5 h-3.5" />
                 POR ATOR
@@ -219,10 +224,10 @@ export default function Search({ movies: initialMovies, onMovieClick }: SearchPr
             <button
               onClick={handleRefresh}
               disabled={isRefreshing || isLoading}
-              className="px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-gray-400 hover:text-white text-xs font-sans flex items-center gap-1.5 transition-all cursor-pointer"
+              className="px-3.5 py-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-gray-300 hover:text-white text-xs font-sans flex items-center gap-1.5 transition-all cursor-pointer active:scale-95"
             >
               <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin text-brand-red' : ''}`} />
-              Atualizar
+              <span>Atualizar</span>
             </button>
           </div>
         </section>
@@ -234,7 +239,7 @@ export default function Search({ movies: initialMovies, onMovieClick }: SearchPr
             <span>Explorar Gêneros</span>
           </div>
 
-          <div className="flex gap-2.5 overflow-x-auto hide-scrollbar py-1">
+          <div className="flex gap-2 overflow-x-auto hide-scrollbar py-1">
             {GENRE_TAGS.map((genre) => {
               const isActive = selectedGenre.name === genre.name;
               return (
@@ -244,10 +249,10 @@ export default function Search({ movies: initialMovies, onMovieClick }: SearchPr
                     setSelectedGenre(genre);
                     setQuery('');
                   }}
-                  className={`flex-none px-4.5 py-2.5 rounded-full text-xs font-display font-bold tracking-wide transition-all cursor-pointer active:scale-95 ${
+                  className={`flex-none px-4 py-2 rounded-xl text-xs font-display font-bold tracking-wide transition-all cursor-pointer active:scale-95 ${
                     isActive
-                      ? 'bg-brand-red text-white shadow-lg shadow-brand-red/20'
-                      : 'bg-surface-container/70 text-gray-400 hover:bg-white/10 hover:text-white border border-white/5'
+                      ? 'bg-brand-red text-white shadow-lg shadow-brand-red/25'
+                      : 'bg-surface-container text-gray-300 hover:bg-white/10 hover:text-white border border-white/10'
                   }`}
                 >
                   {genre.name}
@@ -266,15 +271,16 @@ export default function Search({ movies: initialMovies, onMovieClick }: SearchPr
             <div className="flex gap-4 overflow-x-auto hide-scrollbar pb-2">
               {actorResults.slice(0, 6).map((actor) => (
                 <div key={actor.id} className="flex-none w-24 text-center space-y-2">
-                  <div className="w-20 h-20 rounded-full border border-white/15 overflow-hidden mx-auto bg-surface-container">
+                  <div className="w-20 h-20 rounded-full border-2 border-white/15 overflow-hidden mx-auto bg-surface-container shadow-md">
                     <img
                       referrerPolicy="no-referrer"
                       src={
                         actor.profile_path
                           ? `https://image.tmdb.org/t/p/w185${actor.profile_path}`
-                          : 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=185&auto=format&fit=crop&q=80'
+                          : DEFAULT_AVATAR_FALLBACK
                       }
                       alt={actor.name}
+                      onError={(e) => handleImageError(e, 'avatar')}
                       className="w-full h-full object-cover"
                     />
                   </div>
@@ -293,7 +299,7 @@ export default function Search({ movies: initialMovies, onMovieClick }: SearchPr
         )}
 
         {/* Grid de Resultados */}
-        {!isLoading || page > 1 ? (
+        {(!isLoading || page > 1) && (
           <section className="space-y-6">
             <div className="flex justify-between items-center text-xs text-gray-400 font-sans">
               <span>
@@ -313,18 +319,20 @@ export default function Search({ movies: initialMovies, onMovieClick }: SearchPr
                   onClick={() => onMovieClick(movie)}
                   className="group cursor-pointer space-y-2"
                 >
-                  <div className="aspect-[2/3] rounded-2xl overflow-hidden border border-white/10 bg-surface-container relative transition-all duration-300 group-hover:scale-105 group-hover:border-brand-red/50 group-hover:shadow-xl">
+                  <div className="aspect-[2/3] rounded-2xl overflow-hidden border border-white/10 bg-surface-container relative transition-all duration-300 group-hover:scale-105 group-hover:border-brand-red/50 group-hover:shadow-xl shadow-md">
                     <img
                       referrerPolicy="no-referrer"
-                      src={movie.imageUrl}
+                      src={movie.imageUrl || DEFAULT_POSTER_FALLBACK}
                       alt={movie.title}
-                      className="w-full h-full object-cover"
+                      onError={(e) => handleImageError(e, 'poster')}
+                      className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                      loading="lazy"
                     />
-                    <div className="absolute top-2 left-2 px-2 py-0.5 rounded bg-black/70 backdrop-blur-md text-[9px] font-display font-black text-brand-red uppercase border border-white/10">
+                    <div className="absolute top-2 left-2 px-2 py-0.5 rounded bg-black/75 backdrop-blur-md text-[9px] font-display font-black text-brand-red uppercase border border-white/10">
                       {movie.type === 'series' ? 'SÉRIE' : 'FILME'}
                     </div>
                     <div className="absolute bottom-2 right-2 glass-panel px-2 py-0.5 rounded text-[10px] font-extrabold text-white flex items-center gap-1 shadow">
-                      <Star className="w-3 h-3 fill-brand-red text-brand-red" />
+                      <Star className="w-3 h-3 fill-yellow-400 text-yellow-400" />
                       {movie.rating.toFixed(1)}
                     </div>
                   </div>
@@ -332,7 +340,7 @@ export default function Search({ movies: initialMovies, onMovieClick }: SearchPr
                     <p className="font-display font-bold text-xs truncate text-gray-200 group-hover:text-white transition-colors">
                       {movie.title}
                     </p>
-                    <p className="font-sans text-[10px] text-gray-400">
+                    <p className="font-sans text-[10px] text-gray-400 font-medium">
                       {movie.year} • {movie.duration}
                     </p>
                   </div>
@@ -346,7 +354,7 @@ export default function Search({ movies: initialMovies, onMovieClick }: SearchPr
                 <button
                   onClick={handleLoadMore}
                   disabled={isLoading}
-                  className="px-8 py-3.5 bg-brand-red hover:bg-brand-red-hover text-white font-display font-bold text-xs tracking-wider rounded-xl transition-all cursor-pointer flex items-center gap-2 shadow-lg shadow-brand-red/25"
+                  className="px-8 py-3.5 bg-brand-red hover:bg-brand-red-hover text-white font-display font-black text-xs tracking-wider rounded-xl transition-all cursor-pointer flex items-center gap-2 shadow-lg shadow-brand-red/30 active:scale-95"
                 >
                   {isLoading ? (
                     <>
@@ -360,7 +368,7 @@ export default function Search({ movies: initialMovies, onMovieClick }: SearchPr
               </div>
             )}
           </section>
-        ) : null}
+        )}
       </div>
     </motion.div>
   );

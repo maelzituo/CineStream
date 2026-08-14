@@ -3,9 +3,11 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+import { useState } from 'react';
 import { motion } from 'motion/react';
 import { Play, Info, ThumbsUp, Sparkles } from 'lucide-react';
 import { Movie } from '../types';
+import { handleImageError, DEFAULT_BACKDROP_FALLBACK } from '../lib/imageFallback';
 
 interface HeroProps {
   movie: Movie;
@@ -14,92 +16,101 @@ interface HeroProps {
 }
 
 export default function Hero({ movie, onPlayClick, onInfoClick }: HeroProps) {
+  const [backdropSrc, setBackdropSrc] = useState(
+    movie.backdropUrl || movie.imageUrl || DEFAULT_BACKDROP_FALLBACK
+  );
+
   return (
-    <section className="relative w-full h-[70vh] md:h-[85vh] overflow-hidden flex items-end">
+    <section className="relative w-full min-h-[600px] sm:min-h-[660px] md:min-h-[720px] h-[82vh] md:h-[88vh] overflow-hidden flex items-end pt-24 pb-14 sm:pb-16 md:pb-20">
       {/* Background Poster / Backdrop with Smooth Cinematic Parallax / Zoom */}
-      <div className="absolute inset-0 z-0">
-        <div className="absolute inset-0 bg-gradient-to-t from-brand-bg via-brand-bg/10 to-transparent z-10" />
-        <div className="absolute inset-0 bg-gradient-to-r from-brand-bg via-transparent to-transparent z-10" />
+      <div className="absolute inset-0 z-0 overflow-hidden bg-brand-bg">
+        {/* Top Header Protection Gradient */}
+        <div className="absolute top-0 left-0 right-0 h-40 bg-gradient-to-b from-[#0F0F0F] via-[#0F0F0F]/80 to-transparent z-10 pointer-events-none" />
+        <div className="absolute inset-0 bg-gradient-to-t from-brand-bg via-brand-bg/50 to-transparent z-10" />
+        <div className="absolute inset-0 bg-gradient-to-r from-brand-bg via-brand-bg/70 to-transparent z-10" />
         
-        {/* Animated background image */}
-        <motion.div
-          initial={{ scale: 1 }}
-          animate={{ scale: 1.05 }}
-          transition={{
-            duration: 15,
-            ease: 'easeInOut',
-            repeat: Infinity,
-            repeatType: 'reverse',
+        {/* Animated background image with error fallback */}
+        <motion.img
+          key={movie.id}
+          initial={{ scale: 1.08, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          transition={{ duration: 1.2, ease: 'easeOut' }}
+          referrerPolicy="no-referrer"
+          src={backdropSrc}
+          alt={movie.title}
+          onError={(e) => {
+            handleImageError(e, 'backdrop');
+            setBackdropSrc(DEFAULT_BACKDROP_FALLBACK);
           }}
-          className="w-full h-full bg-cover bg-center"
-          style={{
-            backgroundImage: `url('${movie.backdropUrl}')`,
-          }}
+          className="w-full h-full object-cover object-center transform filter brightness-90 contrast-105"
         />
       </div>
 
       {/* Hero Content Panel */}
-      <div className="relative z-20 px-6 md:px-16 pb-16 md:pb-20 max-w-4xl select-none">
+      <div className="relative z-20 px-6 sm:px-10 md:px-16 max-w-4xl select-none">
         <motion.div
-          initial={{ opacity: 0, y: 30 }}
+          key={`content-${movie.id}`}
+          initial={{ opacity: 0, y: 25 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8, delay: 0.1 }}
-          className="space-y-4"
+          transition={{ duration: 0.7, delay: 0.1 }}
+          className="space-y-3.5 sm:space-y-4"
         >
           {/* Tagline */}
-          <div className="flex items-center gap-2">
-            <span className="inline-flex items-center px-3 py-1 bg-brand-red text-white text-[10px] font-display font-black rounded-sm tracking-[0.2em]">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="inline-flex items-center px-2.5 py-1 bg-brand-red text-white text-[10px] font-display font-black rounded tracking-[0.2em] shadow-md shadow-brand-red/30">
               ORIGINAL CINESTREAM
             </span>
-            <span className="text-yellow-500 flex items-center gap-1 font-display font-bold text-xs">
-              <Sparkles className="w-3 h-3 fill-yellow-500" /> RECOMENDADO
+            <span className="text-yellow-400 flex items-center gap-1 font-display font-extrabold text-xs bg-black/50 backdrop-blur-sm px-2.5 py-1 rounded border border-yellow-500/20">
+              <Sparkles className="w-3 h-3 fill-yellow-400 text-yellow-400" /> RECOMENDADO
             </span>
           </div>
 
           {/* Title */}
-          <h1 className="font-display font-black text-4xl md:text-6xl text-white uppercase tracking-tighter drop-shadow-2xl">
+          <h1 className="font-display font-black text-2xl sm:text-4xl md:text-5xl lg:text-6xl text-white uppercase tracking-tight drop-shadow-2xl leading-tight">
             {movie.title}
           </h1>
 
           {/* Metadata Block */}
-          <div className="flex flex-wrap items-center gap-3 text-xs md:text-sm font-sans font-medium text-gray-300">
-            <span className="text-emerald-400 font-bold flex items-center gap-1">
-              <ThumbsUp className="w-4.5 h-4.5 fill-emerald-400/20" />
+          <div className="flex flex-wrap items-center gap-2.5 sm:gap-3 text-xs md:text-sm font-sans font-medium text-gray-300">
+            <span className="text-emerald-400 font-bold flex items-center gap-1 bg-emerald-950/50 px-2.5 py-1 rounded border border-emerald-500/30">
+              <ThumbsUp className="w-3.5 h-3.5 fill-emerald-400/20" />
               98% Relevante
             </span>
             <span className="w-1.5 h-1.5 rounded-full bg-white/20" />
-            <span>{movie.year}</span>
+            <span className="text-gray-200 font-bold">{movie.year}</span>
             <span className="w-1.5 h-1.5 rounded-full bg-white/20" />
-            <span className="border border-white/30 px-1.5 py-0.2 rounded text-[10px] tracking-wide font-bold">
+            <span className="border border-white/30 px-2 py-0.5 rounded text-[10px] tracking-wide font-extrabold text-white bg-black/40">
               {movie.ageRating}
             </span>
             <span className="w-1.5 h-1.5 rounded-full bg-white/20" />
-            <span>{movie.duration}</span>
+            <span className="text-gray-200 font-semibold">{movie.duration}</span>
             <span className="w-1.5 h-1.5 rounded-full bg-white/20" />
-            <span className="text-gray-400">{movie.genres.join(', ')}</span>
+            <span className="text-gray-300 truncate max-w-[200px] sm:max-w-none">{movie.genres.join(', ')}</span>
           </div>
 
           {/* Plot Paragraph */}
-          <p className="text-gray-300 text-sm md:text-base leading-relaxed line-clamp-3 md:line-clamp-none max-w-2xl text-justify opacity-90 drop-shadow">
+          <p className="text-gray-200 text-xs sm:text-sm md:text-base leading-relaxed line-clamp-2 sm:line-clamp-3 max-w-2xl opacity-95 drop-shadow">
             {movie.description}
           </p>
 
           {/* Action Callouts */}
-          <div className="flex flex-wrap gap-4 pt-3">
+          <div className="flex flex-wrap items-center gap-3 pt-2">
             <button
               onClick={() => onPlayClick(movie)}
-              className="bg-brand-red hover:bg-brand-red-hover text-white px-8 py-3 rounded-lg flex items-center gap-2.5 font-display font-extrabold text-sm tracking-wider cursor-pointer active:scale-95 hover:scale-[1.03] transition-all duration-300 shadow-lg shadow-brand-red/20"
+              className="bg-brand-red hover:bg-brand-red-hover text-white px-7 sm:px-8 py-3.5 rounded-xl flex items-center justify-center gap-2.5 font-display font-black text-xs sm:text-sm tracking-wider cursor-pointer active:scale-95 hover:scale-[1.02] transition-all duration-300 shadow-xl shadow-brand-red/30 border border-red-500/40"
+              id="hero-play-button"
             >
-              <Play className="w-4 h-4 fill-white" />
-              ASSISTIR AGORA
+              <Play className="w-4 h-4 sm:w-4.5 sm:h-4.5 fill-white" />
+              <span>ASSISTIR AGORA</span>
             </button>
             
             <button
               onClick={() => onInfoClick(movie)}
-              className="glass-panel text-white hover:bg-white/10 border border-white/20 px-8 py-3 rounded-lg flex items-center gap-2.5 font-display font-extrabold text-sm tracking-wider cursor-pointer active:scale-95 hover:scale-[1.03] transition-all duration-300"
+              className="bg-black/50 hover:bg-white/20 border border-white/20 text-white px-6 sm:px-8 py-3.5 rounded-xl flex items-center justify-center gap-2.5 font-display font-extrabold text-xs sm:text-sm tracking-wider cursor-pointer active:scale-95 hover:scale-[1.02] transition-all duration-300 backdrop-blur-md shadow-lg"
+              id="hero-info-button"
             >
-              <Info className="w-4.5 h-4.5" />
-              MAIS INFORMAÇÕES
+              <Info className="w-4 h-4 sm:w-4.5 sm:h-4.5 text-gray-200" />
+              <span>MAIS DETALHES</span>
             </button>
           </div>
         </motion.div>

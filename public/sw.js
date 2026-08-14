@@ -3,7 +3,7 @@
  * @version 1.0.0
  */
 
-const CACHE_VERSION = 'cinestream-v1.0.0';
+const CACHE_VERSION = 'cinestream-v1.0.1';
 const PRECACHE_NAME = `cinestream-precache-${CACHE_VERSION}`;
 const RUNTIME_CACHE_NAME = `cinestream-runtime-${CACHE_VERSION}`;
 const IMAGE_CACHE_NAME = `cinestream-images-${CACHE_VERSION}`;
@@ -169,35 +169,33 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Strategy C: Image Assets (TMDb Posters, Unsplash Covers, Avatars) -> Cache-First with Network Fallback
+  // Strategy C: Image Assets (TMDb Posters, Unsplash Covers, Avatars) -> Stale-While-Revalidate with opaque support
   const isImage =
     request.destination === 'image' ||
     url.hostname.includes('image.tmdb.org') ||
     url.hostname.includes('images.unsplash.com') ||
-    url.hostname.includes('lh3.googleusercontent.com');
+    url.pathname.match(/\.(png|jpg|jpeg|webp|avif|gif)$/i);
 
   if (isImage) {
     event.respondWith(
       caches.match(request).then((cachedResponse) => {
-        if (cachedResponse) {
-          return cachedResponse;
-        }
-
-        return fetch(request)
+        const fetchPromise = fetch(request)
           .then((networkResponse) => {
-            if (networkResponse && networkResponse.status === 200) {
+            if (networkResponse && (networkResponse.ok || networkResponse.type === 'opaque')) {
               const responseClone = networkResponse.clone();
               caches.open(IMAGE_CACHE_NAME).then((cache) => {
-                cache.put(request, responseClone);
+                cache.put(request, responseClone).catch(() => {});
                 trimCache(IMAGE_CACHE_NAME, MAX_IMAGE_CACHE_ENTRIES);
               });
             }
             return networkResponse;
           })
           .catch(() => {
-            // If offline and image not cached, gracefully resolve
-            return new Response('', { status: 408, statusText: 'Offline' });
+            // Return cached version if network fails
+            return cachedResponse;
           });
+
+        return cachedResponse || fetchPromise;
       })
     );
     return;
