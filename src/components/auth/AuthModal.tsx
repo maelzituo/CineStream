@@ -283,10 +283,28 @@ export default function AuthModal() {
           <motion.div
             initial={{ opacity: 0, y: -6 }}
             animate={{ opacity: 1, y: 0 }}
-            className="mb-4 p-3.5 rounded-xl bg-red-500/10 border border-red-500/30 flex items-start gap-2.5 text-xs text-red-300"
+            className={`mb-4 p-3.5 rounded-xl border flex items-start gap-2.5 text-xs ${
+              errorMessage.startsWith('PROVIDER_DISABLED|')
+                ? 'bg-amber-500/10 border-amber-500/30 text-amber-200'
+                : 'bg-red-500/10 border-red-500/30 text-red-300'
+            }`}
           >
-            <AlertCircle className="w-4 h-4 text-brand-red shrink-0 mt-0.5" />
-            <div className="flex-1 leading-snug">{errorMessage}</div>
+            <AlertCircle className={`w-4 h-4 shrink-0 mt-0.5 ${errorMessage.startsWith('PROVIDER_DISABLED|') ? 'text-amber-400' : 'text-brand-red'}`} />
+            <div className="flex-1 leading-snug">
+              {errorMessage.startsWith('PROVIDER_DISABLED|') ? (
+                <div className="space-y-1.5">
+                  <strong className="block text-amber-400 font-display text-xs">Email/Senha Desativado</strong>
+                  <p>
+                    O método de autenticação por E-mail e Senha não está habilitado no seu projeto Firebase.
+                  </p>
+                  <p className="opacity-80">
+                    Acesse o <strong>Firebase Console &gt; Authentication &gt; Sign-in method</strong>, clique em "Add new provider" e habilite <strong>Email/Password</strong>.
+                  </p>
+                </div>
+              ) : (
+                errorMessage
+              )}
+            </div>
           </motion.div>
         )}
 

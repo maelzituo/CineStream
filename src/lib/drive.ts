@@ -79,6 +79,21 @@ export async function fetchGoogleDriveMovies(accessToken: string): Promise<Movie
 
     if (!response.ok) {
       const errText = await response.text();
+      let parsedError;
+      try {
+        parsedError = JSON.parse(errText);
+      } catch (e) {
+        // Ignora se não for JSON
+      }
+
+      if (parsedError?.error?.status === 'PERMISSION_DENIED' || parsedError?.error?.code === 403) {
+        const details = parsedError.error.details || [];
+        const linkDetail = details.find((d: any) => d.links && d.links.length > 0);
+        if (linkDetail && linkDetail.links[0].url) {
+          throw new Error(`DRIVE_API_DISABLED|${linkDetail.links[0].url}`);
+        }
+      }
+      
       throw new Error(`Erro na API do Google Drive: ${response.status} - ${errText}`);
     }
 
@@ -121,8 +136,12 @@ export async function fetchGoogleDriveMovies(accessToken: string): Promise<Movie
         similarIds: []
       };
     });
-  } catch (error) {
-    console.error('Erro ao buscar arquivos da pasta do Google Drive:', error);
+  } catch (error: any) {
+    if (error.message?.startsWith('DRIVE_API_DISABLED')) {
+      console.warn('Google Drive API is disabled. Please enable it in the GCP Console.');
+    } else {
+      console.error('Erro ao buscar arquivos da pasta do Google Drive:', error);
+    }
     throw error;
   }
 }

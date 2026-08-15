@@ -3,21 +3,17 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { initializeApp, getApps, getApp } from 'firebase/app';
 import {
-  getFirestore,
   collection,
   doc,
   setDoc,
-  getDoc,
   getDocs,
   deleteDoc,
   query,
   where,
   orderBy,
-  Firestore
 } from 'firebase/firestore';
-import firebaseConfig from '../../firebase-applet-config.json';
+import { firestoreDb } from './firebaseClient';
 
 export interface WatchHistoryEntry {
   id: string;
@@ -40,15 +36,6 @@ export interface MovieReview {
   createdAt: string;
 }
 
-// Inicializa instância Firestore
-const firebaseApp = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
-let firestoreDb: Firestore | null = null;
-try {
-  firestoreDb = getFirestore(firebaseApp);
-} catch (err) {
-  console.warn('Firestore inicializado em modo offline/cache:', err);
-}
-
 class CineStreamDatabase {
   private prefix = 'cinestream_db_';
 
@@ -57,50 +44,13 @@ class CineStreamDatabase {
   }
 
   private initDatabase() {
+    // Inicialização de tabelas limpas para produção sem dados fictícios
     if (!localStorage.getItem(this.getKey('watch_history'))) {
-      const initialHistory: WatchHistoryEntry[] = [
-        {
-          id: 'hist_1',
-          movieId: 'interstellar',
-          progress: 42,
-          seconds: 4280,
-          updatedAt: new Date(Date.now() - 3600000 * 2).toISOString(),
-          completed: false,
-        },
-        {
-          id: 'hist_2',
-          movieId: 'o-cavaleiro-das-trevas',
-          progress: 100,
-          seconds: 9120,
-          updatedAt: new Date(Date.now() - 3600000 * 24).toISOString(),
-          completed: true,
-        }
-      ];
-      localStorage.setItem(this.getKey('watch_history'), JSON.stringify(initialHistory));
+      localStorage.setItem(this.getKey('watch_history'), JSON.stringify([]));
     }
 
     if (!localStorage.getItem(this.getKey('reviews'))) {
-      const initialReviews: MovieReview[] = [
-        {
-          id: 'rev_1',
-          movieId: 'interstellar',
-          rating: 10,
-          comment: 'Uma obra-prima incontestável do cinema de ficção científica. A trilha sonora combinada com os efeitos visuais cria uma experiência transcendental.',
-          userName: 'Ricardo Albuquerque',
-          userAvatar: 'https://lh3.googleusercontent.com/aida-public/AB6AXuBBuZHq7rFx575Hw84XGsBZEI5_2fKwh6pIys2s8h-fNMRi8e4FaHIB--s3M7X3Wz0b_BPtlxmKK1jwQa4JR7NYeob_w4iEIHxzUZO-9oQeL7nqODEsO0DTEKJNvQAYg3O4pgDJ3tDlX4Mw5ahgE7s1ibv66sw_kemCWADfhR2o1nKyrkV7AmJiiBr6hlkOupvWW9n-GxQ5GyzZDWsJHATQCXx0UmRx-dYe8hBVGYH_luxAIMJcOEdrEOEuhDEfQcLd1bAUKsJkOFY',
-          createdAt: new Date(Date.now() - 3600000 * 5).toISOString(),
-        },
-        {
-          id: 'rev_2',
-          movieId: 'o-cavaleiro-das-trevas',
-          rating: 9,
-          comment: 'Atuação inesquecível do Coringa. Roteiro tenso e direção impecável.',
-          userName: 'Rodrigo Lima',
-          userAvatar: 'https://lh3.googleusercontent.com/aida-public/AB6AXuCnebKsozj4QcBN8MlleASK473IE-l7LLG8ACfSlMSP8sD9MEVhRNQCfHKUS3SCk6EcH8QdaLpAMWOOtGVMAhfNAnpqTPLyF3-k7mAv-fIyCi_bihZDg37SE2C3SdJTAhLVfAajRZBREe3NWyuWLd4980QSi7_hKed1zvifhkxr8USyINMFShIRyzaPBy6cw0jhkOL1_Bqpz832OdD_Ufemp-KmDHIcKScYsjuonmSWnnDCVgtJjgjGyXGbFYTf00gA3mdav-YNzo8',
-          createdAt: new Date(Date.now() - 3600000 * 48).toISOString(),
-        }
-      ];
-      localStorage.setItem(this.getKey('reviews'), JSON.stringify(initialReviews));
+      localStorage.setItem(this.getKey('reviews'), JSON.stringify([]));
     }
   }
 
@@ -132,7 +82,11 @@ class CineStreamDatabase {
     }
 
     const data = localStorage.getItem(this.getKey('watch_history'));
-    return data ? JSON.parse(data) : [];
+    const history: WatchHistoryEntry[] = data ? JSON.parse(data) : [];
+    if (userId) {
+      return history.filter((h) => !h.userId || h.userId === userId);
+    }
+    return history;
   }
 
   async getMovieWatchProgress(movieId: string, userId?: string): Promise<WatchHistoryEntry | null> {
@@ -205,6 +159,26 @@ class CineStreamDatabase {
   /* --- REVIEWS DATABASE ENDPOINTS --- */
 
   async getReviews(movieId?: string): Promise<MovieReview[]> {
+    if (firestoreDb && movieId) {
+      try {
+        const q = query(
+          collection(firestoreDb, 'reviews'),
+          where('movieId', '==', movieId),
+          orderBy('createdAt', 'desc')
+        );
+        const snapshot = await getDocs(q);
+        if (!snapshot.empty) {
+          const list: MovieReview[] = [];
+          snapshot.forEach((docSnap) => {
+            list.push(docSnap.data() as MovieReview);
+          });
+          return list;
+        }
+      } catch (e) {
+        console.warn('Firestore reviews fallback:', e);
+      }
+    }
+
     const data = localStorage.getItem(this.getKey('reviews'));
     const reviews: MovieReview[] = data ? JSON.parse(data) : [];
 

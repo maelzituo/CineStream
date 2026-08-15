@@ -1,0 +1,57 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile data",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "maxLength": 128 },
+        "email": { "type": "string", "maxLength": 256 },
+        "displayName": { "type": "string", "maxLength": 60 },
+        "photoURL": { "type": "string", "maxLength": 2048 },
+        "providerId": { "type": "string", "maxLength": 30 },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" },
+        "lastLoginAt": { "type": "string" }
+      },
+      "required": ["uid"]
+    },
+    "Favorite": {
+      "title": "Favorite",
+      "description": "A user's saved movie",
+      "type": "object",
+      "properties": {
+        "movieId": { "type": "string", "maxLength": 50 },
+        "addedAt": { "type": "string" }
+      },
+      "required": ["movieId"]
+    },
+    "HistoryEntry": {
+      "title": "HistoryEntry",
+      "description": "A user's watch history",
+      "type": "object",
+      "properties": {
+        "movieId": { "type": "string", "maxLength": 50 },
+        "progress": { "type": "number" },
+        "seconds": { "type": "number" },
+        "completed": { "type": "boolean" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["movieId", "progress", "seconds"]
+    }
+  },
+  "firestore": {
+    "users/{userId}": {
+      "schema": "User",
+      "description": "Core user profiles"
+    },
+    "users/{userId}/favorites/{movieId}": {
+      "schema": "Favorite",
+      "description": "Saved movies for a specific user"
+    },
+    "users/{userId}/history/{movieId}": {
+      "schema": "HistoryEntry",
+      "description": "Watch progress for a specific user"
+    }
+  }
+}

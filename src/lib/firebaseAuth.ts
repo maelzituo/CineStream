@@ -3,43 +3,22 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { initializeApp } from 'firebase/app';
-import { 
-  getAuth, 
-  signInWithPopup, 
-  GoogleAuthProvider, 
-  onAuthStateChanged, 
-  User 
-} from 'firebase/auth';
-import firebaseConfig from '../../firebase-applet-config.json';
+import { User } from 'firebase/auth';
+import { auth } from './firebaseClient';
+import { AuthService } from './authService';
 
-// Initialize Firebase
-const app = initializeApp(firebaseConfig);
-export const auth = getAuth(app);
-
-// Request Google Drive Scopes
-const provider = new GoogleAuthProvider();
-provider.addScope('https://www.googleapis.com/auth/drive.readonly');
-provider.addScope('https://www.googleapis.com/auth/drive.metadata.readonly');
-
-let isSigningIn = false;
-let cachedAccessToken: string | null = null;
+export { auth };
 
 // Initialize auth listener
 export const initAuth = (
   onAuthSuccess?: (user: User, token: string) => void,
   onAuthFailure?: () => void
 ) => {
-  return onAuthStateChanged(auth, async (user: User | null) => {
-    if (user) {
-      if (cachedAccessToken) {
-        if (onAuthSuccess) onAuthSuccess(user, cachedAccessToken);
-      } else if (!isSigningIn) {
-        cachedAccessToken = null;
-        if (onAuthFailure) onAuthFailure();
-      }
+  return AuthService.onAuthState((authUser) => {
+    if (authUser && auth.currentUser) {
+      const token = AuthService.getDriveToken() || '';
+      if (onAuthSuccess) onAuthSuccess(auth.currentUser, token);
     } else {
-      cachedAccessToken = null;
       if (onAuthFailure) onAuthFailure();
     }
   });
@@ -47,35 +26,20 @@ export const initAuth = (
 
 // Start Google sign-in flow
 export const googleSignIn = async (): Promise<{ user: User; accessToken: string } | null> => {
-  try {
-    isSigningIn = true;
-    const result = await signInWithPopup(auth, provider);
-    const credential = GoogleAuthProvider.credentialFromResult(result);
-    if (!credential?.accessToken) {
-      throw new Error('Não foi possível obter o token de acesso do Google Drive.');
-    }
-
-    cachedAccessToken = credential.accessToken;
-    return { user: result.user, accessToken: cachedAccessToken };
-  } catch (error: any) {
-    if (error?.code === 'auth/popup-closed-by-user') {
-      console.warn('Autenticação cancelada: o usuário fechou o popup.');
-    } else {
-      console.error('Erro no login do Firebase:', error);
-    }
-    throw error;
-  } finally {
-    isSigningIn = false;
+  const result = await AuthService.loginWithGoogle();
+  if (auth.currentUser) {
+    return { user: auth.currentUser, accessToken: result.accessToken };
   }
+  return null;
 };
 
 // Retrieve cached access token
 export const getAccessToken = async (): Promise<string | null> => {
-  return cachedAccessToken;
+  return AuthService.getDriveToken();
 };
 
 // Clear session and sign out
 export const logout = async () => {
-  await auth.signOut();
-  cachedAccessToken = null;
+  await AuthService.logout();
 };
+

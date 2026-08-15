@@ -25,6 +25,7 @@ import { Movie } from '../types';
 import { MOVIES_DATABASE } from '../data/movies';
 import { db, MovieReview } from '../lib/database';
 import { handleImageError, DEFAULT_BACKDROP_FALLBACK, DEFAULT_POSTER_FALLBACK, DEFAULT_AVATAR_FALLBACK } from '../lib/imageFallback';
+import { useAuth } from '../context/AuthContext';
 import MovieRepository from '../services/movieRepository';
 import SeriesRepository from '../services/seriesRepository';
 
@@ -45,6 +46,7 @@ export default function MovieDetails({
   savedIds,
   onNavigateToMovie,
 }: MovieDetailsProps) {
+  const { user } = useAuth();
   const [movie, setMovie] = useState<Movie>(initialMovie);
   const [showTrailerModal, setShowTrailerModal] = useState(false);
   const [backdropSrc, setBackdropSrc] = useState(
@@ -113,19 +115,11 @@ export default function MovieDetails({
     try {
       setSubmittingReview(true);
       
-      let userName = 'Usuário Premium';
-      let userAvatar = DEFAULT_AVATAR_FALLBACK;
+      const userName = user?.displayName || user?.email?.split('@')[0] || 'Usuário CineStream';
+      const userAvatar = user?.photoURL || DEFAULT_AVATAR_FALLBACK;
+      const userId = user?.uid;
 
-      const cachedProfile = localStorage.getItem('cinestream_profile');
-      if (cachedProfile) {
-        try {
-          const profile = JSON.parse(cachedProfile);
-          if (profile.name) userName = profile.name;
-          if (profile.avatarUrl) userAvatar = profile.avatarUrl;
-        } catch (_) {}
-      }
-
-      await db.addReview(movie.id, newRating, newComment, userName, userAvatar);
+      await db.addReview(movie.id, newRating, newComment, userName, userAvatar, userId);
       setNewComment('');
       setNewRating(10);
       await loadReviews();

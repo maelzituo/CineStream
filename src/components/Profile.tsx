@@ -51,6 +51,7 @@ interface ProfileProps {
   gdriveUser: any | null;
   onGoogleSignIn: () => void;
   onGoogleSignOut: () => void;
+  savedCount?: number;
 }
 
 export default function Profile({
@@ -58,6 +59,7 @@ export default function Profile({
   gdriveUser,
   onGoogleSignIn,
   onGoogleSignOut,
+  savedCount,
 }: ProfileProps) {
   const {
     user,
@@ -71,7 +73,7 @@ export default function Profile({
 
   // Estado do Perfil
   const [profileName, setProfileName] = useState(
-    user?.displayName || 'Ricardo Albuquerque'
+    user?.displayName || user?.email?.split('@')[0] || 'Usuário CineStream'
   );
   const [profileAvatar, setProfileAvatar] = useState(
     user?.photoURL || CINEMA_AVATARS[0].url
@@ -349,7 +351,7 @@ export default function Profile({
           </div>
           <div className="glass-panel rounded-xl p-4 text-center hover:bg-white/5 transition-colors">
             <p className="font-display font-black text-xl md:text-2xl text-brand-red">
-              18
+              {savedCount !== undefined ? savedCount : 0}
             </p>
             <p className="font-display font-extrabold text-[9px] md:text-[10px] text-gray-400 tracking-wider mt-1 uppercase">
               Minha Lista

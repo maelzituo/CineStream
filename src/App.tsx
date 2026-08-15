@@ -21,6 +21,7 @@ import { Movie, Tab } from './types';
 import { MOVIES_DATABASE, INITIAL_SAVED_IDS } from './data/movies';
 import { Home, Search as SearchIcon, Bookmark, User, HardDrive, RefreshCw } from 'lucide-react';
 import { db, WatchHistoryEntry } from './lib/database';
+import { firestoreService } from './lib/firestoreService';
 import { fetchGoogleDriveMovies } from './lib/drive';
 import MovieRepository from './services/movieRepository';
 import SeriesRepository from './services/seriesRepository';
@@ -39,7 +40,15 @@ function CineStreamApp() {
   });
 
   // Auth Context
-  const { user, driveToken, loginWithGoogle, logout } = useAuth();
+  const { user, loading: authLoading, driveToken, loginWithGoogle, logout, openAuthModal } = useAuth();
+
+  // Route Protection Effect: se deslogar enquanto estiver em área restrita
+  useEffect(() => {
+    if (!authLoading && !user && (currentTab === 'lista' || currentTab === 'perfil')) {
+      setCurrentTab('inicio');
+      openAuthModal('login');
+    }
+  }, [authLoading, user, currentTab, openAuthModal]);
 
   // Estados do Google Drive
   const [gdriveMovies, setGdriveMovies] = useState<Movie[]>([]);
@@ -106,8 +115,13 @@ function CineStreamApp() {
           const movies = await fetchGoogleDriveMovies(driveToken);
           setGdriveMovies(movies);
         } catch (err: any) {
-          console.error('Erro ao carregar do Drive:', err);
-          setGdriveError('Falha ao carregar os filmes da pasta do Google Drive.');
+          if (err.message?.startsWith('DRIVE_API_DISABLED|')) {
+            console.warn('Google Drive API disabled.');
+            setGdriveError(err.message);
+          } else {
+            console.error('Erro ao carregar do Drive:', err);
+            setGdriveError('Falha ao carregar os filmes da pasta do Google Drive.');
+          }
         } finally {
           setLoadingGdrive(false);
         }
@@ -153,23 +167,88 @@ function CineStreamApp() {
   // Histórico de reprodução
   const [watchHistory, setWatchHistory] = useState<WatchHistoryEntry[]>([]);
 
-  // Lista de favoritos sincronizada com localStorage
-  const [savedIds, setSavedIds] = useState<string[]>(() => {
-    const cached = localStorage.getItem('cinestream_saved_ids');
-    return cached ? JSON.parse(cached) : INITIAL_SAVED_IDS;
-  });
+  // Lista de favoritos
+  const [savedIds, setSavedIds] = useState<string[]>([]);
+
+  // Load and Sync User Data
+  useEffect(() => {
+    let isMounted = true;
+
+    const syncUserData = async () => {
+      if (authLoading) return;
+
+      if (user) {
+        // User logged in: Load from Firestore
+        const [firestoreFavorites, firestoreHistory] = await Promise.all([
+          firestoreService.getFavorites(user.uid),
+          firestoreService.getWatchHistory(user.uid),
+        ]);
+
+        // Check if there's local data to migrate
+        const localFavoritesRaw = localStorage.getItem('cinestream_saved_ids');
+        let localFavorites: string[] = localFavoritesRaw ? JSON.parse(localFavoritesRaw) : [];
+        // Only migrate initial defaults if the user has NO favorites yet
+        if (localFavorites.length === 0 && firestoreFavorites.length === 0) {
+           localFavorites = INITIAL_SAVED_IDS;
+        }
+
+        const localHistory = await db.getWatchHistory();
+
+        const needsMigration = (localFavoritesRaw && localFavorites.length > 0) || localHistory.length > 0;
+
+        if (needsMigration) {
+          await firestoreService.migrateLocalDataToFirestore(user.uid, localFavorites, localHistory);
+          // Reload after migration
+          const [migratedFavs, migratedHist] = await Promise.all([
+            firestoreService.getFavorites(user.uid),
+            firestoreService.getWatchHistory(user.uid),
+          ]);
+          if (isMounted) {
+            setSavedIds(migratedFavs);
+            setWatchHistory(migratedHist);
+          }
+          // Clear local storage after successful migration
+          localStorage.removeItem('cinestream_saved_ids');
+          await db.clearWatchHistory();
+        } else {
+          if (isMounted) {
+            setSavedIds(firestoreFavorites);
+            setWatchHistory(firestoreHistory);
+          }
+        }
+      } else {
+        // Guest mode: Load from local storage
+        const cached = localStorage.getItem('cinestream_saved_ids');
+        const localFavs = cached ? JSON.parse(cached) : INITIAL_SAVED_IDS;
+        const localHist = await db.getWatchHistory();
+        
+        if (isMounted) {
+          setSavedIds(localFavs);
+          setWatchHistory(localHist);
+        }
+      }
+    };
+
+    syncUserData();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [user, authLoading]);
 
   useEffect(() => {
-    localStorage.setItem('cinestream_saved_ids', JSON.stringify(savedIds));
-  }, [savedIds]);
+    if (!user) {
+      localStorage.setItem('cinestream_saved_ids', JSON.stringify(savedIds));
+    }
+  }, [savedIds, user]);
 
-  // Carrega histórico de visualizações
   const loadWatchHistory = async () => {
-    try {
+    if (user) {
+      const history = await firestoreService.getWatchHistory(user.uid);
+      setWatchHistory(history);
+    } else {
       const history = await db.getWatchHistory();
       setWatchHistory(history);
-    } catch (e) {
-      console.error('Erro ao carregar histórico:', e);
     }
   };
 
@@ -177,18 +256,44 @@ function CineStreamApp() {
     loadWatchHistory();
   }, [playingMovie]);
 
-  const handleSavedToggle = (movie: Movie) => {
-    setSavedIds((prev) => {
-      if (prev.includes(movie.id)) {
-        return prev.filter((id) => id !== movie.id);
-      } else {
-        return [...prev, movie.id];
-      }
-    });
+  const handlePlayMovie = async (movie: Movie) => {
+    setPlayingMovie(movie);
+    
+    // Record history
+    const defaultDuration = 7200; // 2 hours
+    const defaultSeconds = 600; // Mark as 10 minutes watched so it shows progress
+
+    if (user) {
+      await firestoreService.updateWatchProgress(user.uid, movie.id, defaultSeconds, defaultDuration);
+    } else {
+      await db.updateWatchProgress(movie.id, defaultSeconds, defaultDuration);
+    }
+    loadWatchHistory();
   };
 
-  const handleRemoveFromList = (movie: Movie) => {
+  const handleSavedToggle = async (movie: Movie) => {
+    const isSaved = savedIds.includes(movie.id);
+    
+    // Optimistic UI Update
+    setSavedIds((prev) => {
+      if (isSaved) return prev.filter((id) => id !== movie.id);
+      return [...prev, movie.id];
+    });
+
+    if (user) {
+      if (isSaved) {
+        await firestoreService.removeFavorite(user.uid, movie.id);
+      } else {
+        await firestoreService.addFavorite(user.uid, movie.id);
+      }
+    }
+  };
+
+  const handleRemoveFromList = async (movie: Movie) => {
     setSavedIds((prev) => prev.filter((id) => id !== movie.id));
+    if (user) {
+      await firestoreService.removeFavorite(user.uid, movie.id);
+    }
   };
 
   const handleMovieSelect = (movie: Movie) => {
@@ -205,6 +310,10 @@ function CineStreamApp() {
   };
 
   const handleTabChange = (tab: Tab) => {
+    if (!user && (tab === 'lista' || tab === 'perfil')) {
+      openAuthModal('login');
+      return;
+    }
     setMovieHistory([]);
     setCurrentTab(tab);
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -274,7 +383,7 @@ function CineStreamApp() {
                 {/* Hero Imersivo do Filme Principal */}
                 <Hero
                   movie={heroMovie}
-                  onPlayClick={(movie) => setPlayingMovie(movie)}
+                  onPlayClick={handlePlayMovie}
                   onInfoClick={handleMovieSelect}
                 />
 
@@ -440,8 +549,31 @@ function CineStreamApp() {
                         </p>
                       </div>
                     ) : gdriveError ? (
-                      <div className="mx-6 md:mx-16 p-5 rounded-2xl bg-red-500/5 border border-red-500/10 text-center">
-                        <p className="text-xs text-brand-red font-semibold">{gdriveError}</p>
+                      <div className="mx-6 md:mx-16 p-6 rounded-2xl bg-red-500/10 border border-red-500/20 text-center space-y-4">
+                        <div className="flex justify-center">
+                          <HardDrive className="w-8 h-8 text-brand-red opacity-80" />
+                        </div>
+                        {gdriveError.startsWith('DRIVE_API_DISABLED|') ? (
+                          <>
+                            <h3 className="text-white font-display font-bold">API do Google Drive Desativada</h3>
+                            <p className="text-sm text-gray-400 max-w-lg mx-auto">
+                              Seu projeto no Google Cloud (vinculado ao Firebase) não tem a API do Google Drive habilitada.
+                            </p>
+                            <a
+                              href={gdriveError.split('|')[1]}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-block mt-4 px-6 py-3 bg-brand-red hover:bg-brand-red-hover text-white font-display font-black text-xs tracking-widest rounded-xl transition-all shadow-lg shadow-brand-red/30 uppercase"
+                            >
+                              Ativar API do Google Drive
+                            </a>
+                            <p className="text-xs text-gray-500 mt-3">
+                              Após ativar, aguarde alguns minutos e recarregue a página.
+                            </p>
+                          </>
+                        ) : (
+                          <p className="text-xs text-brand-red font-semibold">{gdriveError}</p>
+                        )}
                       </div>
                     ) : gdriveMovies.length === 0 ? (
                       <div className="mx-6 md:mx-16 p-8 rounded-2xl bg-white/5 border border-dashed border-white/10 text-center space-y-2">
@@ -496,6 +628,7 @@ function CineStreamApp() {
                 gdriveUser={user}
                 onGoogleSignIn={handleGoogleSignIn}
                 onGoogleSignOut={handleGoogleSignOut}
+                savedCount={savedIds.length}
               />
             )}
           </>
@@ -506,7 +639,7 @@ function CineStreamApp() {
           <MovieDetails
             movie={activeMovieDetail}
             onBack={handleBackFromDetails}
-            onPlayClick={(movie) => setPlayingMovie(movie)}
+            onPlayClick={handlePlayMovie}
             onSavedToggle={handleSavedToggle}
             savedIds={savedIds}
             onNavigateToMovie={handleNavigateToMovieInDetails}

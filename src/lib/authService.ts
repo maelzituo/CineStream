@@ -4,7 +4,6 @@
  */
 
 import {
-  getAuth,
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
   signInWithPopup,
@@ -17,38 +16,16 @@ import {
   EmailAuthProvider,
   onAuthStateChanged,
   User as FirebaseUser,
-  setPersistence,
-  browserLocalPersistence
 } from 'firebase/auth';
-import { initializeApp, getApps, getApp } from 'firebase/app';
 import {
-  getFirestore,
   doc,
   setDoc,
-  getDoc,
   serverTimestamp,
-  Firestore
 } from 'firebase/firestore';
-import firebaseConfig from '../../firebase-applet-config.json';
+import { auth, firestoreDb } from './firebaseClient';
 import { AuthUser, PasswordValidationResult } from '../types';
 import { validateEmail, validateName, validatePassword } from './passwordUtils';
 import { SecurityLogger } from './securityLogger';
-
-// Inicialização única do Firebase
-const firebaseApp = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
-export const auth = getAuth(firebaseApp);
-
-let firestoreDb: Firestore | null = null;
-try {
-  firestoreDb = getFirestore(firebaseApp);
-} catch (e) {
-  console.warn('Firestore fallback:', e);
-}
-
-// Configuração obrigatória de persistência local da sessão
-setPersistence(auth, browserLocalPersistence).catch((err) => {
-  console.warn('Configuração de persistência de sessão:', err);
-});
 
 // Provedor Oficial do Google OAuth 2.0 com escopos de perfil e Google Drive
 const googleProvider = new GoogleAuthProvider();
@@ -178,6 +155,8 @@ export class AuthService {
         throw new Error('Formato de e-mail inválido.');
       } else if (code === 'auth/weak-password') {
         throw new Error('A senha é muito fraca. Utilize pelo menos 8 caracteres com letras maiúsculas, minúsculas, números e símbolos.');
+      } else if (code === 'auth/operation-not-allowed') {
+        throw new Error('PROVIDER_DISABLED|Email/Password');
       } else {
         throw new Error(error.message || 'Erro ao realizar cadastro. Tente novamente.');
       }
@@ -225,6 +204,10 @@ export class AuthService {
         throw new Error(
           `Muitas tentativas incorretas. Sua conta foi temporariamente protegida por ${failInfo.remainingSeconds} segundos.`
         );
+      }
+
+      if (error?.code === 'auth/operation-not-allowed') {
+        throw new Error('PROVIDER_DISABLED|Email/Password');
       }
 
       throw new Error('E-mail ou senha incorretos. Por favor, tente novamente.');
