@@ -4,14 +4,34 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, viewport-fit=cover" />
     
-    <!-- PWA Primary Identity -->
+    <!-- Primary Identity -->
     <title>CineStream - Filmes, Séries & Nuvem</title>
+    <meta name="title" content="CineStream - Filmes, Séries & Nuvem" />
     <meta name="description" content="Plataforma de streaming ultra rápida com catálogo completo de filmes, séries e conexão segura com Google Drive." />
+    <meta name="keywords" content="streaming, filmes, séries, cinema, google drive, player, cinestream" />
+    <meta name="author" content="Ismael Duarte" />
     <meta name="application-name" content="CineStream" />
     <meta name="theme-color" content="#0F0F0F" media="(prefers-color-scheme: dark)" />
     <meta name="theme-color" content="#0F0F0F" />
+    
+    <!-- Canonical -->
+    <link rel="canonical" href="https://cine-stream-408d7.web.app/" />
 
-    <!-- Web App Manifest -->
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://cine-stream-408d7.web.app/" />
+    <meta property="og:title" content="CineStream - Filmes, Séries & Nuvem" />
+    <meta property="og:description" content="Plataforma de streaming ultra rápida com catálogo completo de filmes, séries e conexão segura com Google Drive." />
+    <meta property="og:image" content="/icons/icon-512.svg" />
+
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary_large_image" />
+    <meta property="twitter:url" content="https://cine-stream-408d7.web.app/" />
+    <meta property="twitter:title" content="CineStream - Filmes, Séries & Nuvem" />
+    <meta property="twitter:description" content="Plataforma de streaming ultra rápida com catálogo completo de filmes, séries e conexão segura com Google Drive." />
+    <meta property="twitter:image" content="/icons/icon-512.svg" />
+
+    <!-- Web App Manifest & Icons -->
     <link rel="manifest" href="/manifest.webmanifest" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="shortcut icon" href="/favicon.svg" />
@@ -31,10 +51,31 @@
     <!-- Mobile Browsers -->
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="format-detection" content="telephone=no" />
+
+    <!-- Preconnect to external domains for performance -->
+    <link rel="preconnect" href="https://image.tmdb.org" crossorigin />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+
+    <!-- Schema.org JSON-LD -->
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "WebApplication",
+        "name": "CineStream",
+        "description": "Plataforma de streaming ultra rápida com catálogo completo de filmes, séries e conexão segura com Google Drive.",
+        "url": "https://cine-stream-408d7.web.app/",
+        "applicationCategory": "EntertainmentApplication",
+        "operatingSystem": "All",
+        "author": {
+          "@type": "Person",
+          "name": "Ismael Duarte"
+        }
+      }
+    </script>
   </head>
   <body class="bg-[#0F0F0F] text-gray-200 antialiased overflow-x-hidden select-none">
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
-

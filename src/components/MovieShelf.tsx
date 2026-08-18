@@ -109,8 +109,7 @@ export default function MovieShelf({
                     layout === 'poster' ? 'aspect-[2/3]' : 'aspect-video'
                   }`}
                 >
-                  <img
-                    referrerPolicy="no-referrer"
+                  <img                     referrerPolicy="no-referrer"
                     src={imageSource}
                     alt={movie.title}
                     onError={(e) => handleImageError(e, layout === 'poster' ? 'poster' : 'backdrop')}

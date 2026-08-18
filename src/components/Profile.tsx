@@ -46,6 +46,7 @@ import PasswordStrengthMeter from './auth/PasswordStrengthMeter';
 import AvatarPicker, { CINEMA_AVATARS } from './auth/AvatarPicker';
 import { pwaManager } from '../lib/pwa';
 import { handleImageError, DEFAULT_AVATAR_FALLBACK } from '../lib/imageFallback';
+import { getFriendlyErrorMessage } from '../lib/firebaseMessages';
 
 interface ProfileProps {
   onLogout: () => void;
@@ -139,7 +140,7 @@ export default function Profile({
         }
         setIsEditingName(false);
       } catch (err: any) {
-        alert(err.message || 'Erro ao salvar nome');
+        console.warn('Erro ao salvar nome:', err);
       }
     }
   };
@@ -187,7 +188,7 @@ export default function Profile({
       setNewPassword('');
       setConfirmNewPassword('');
     } catch (err: any) {
-      setPassError(err.message || 'Falha ao atualizar senha.');
+      setPassError(getFriendlyErrorMessage(err));
     } finally {
       setPassChangeLoading(false);
     }
@@ -267,8 +268,7 @@ export default function Profile({
           <div className="relative group mb-4">
             {/* Circular avatar image */}
             <div className="w-32 h-32 md:w-36 md:h-36 rounded-full border-4 border-brand-red p-1.5 overflow-hidden shadow-2xl shadow-brand-red/15 relative bg-surface-container">
-              <img
-                referrerPolicy="no-referrer"
+              <img                 referrerPolicy="no-referrer"
                 className="w-full h-full object-cover rounded-full transition-transform duration-500 group-hover:scale-105"
                 alt={profileName}
                 src={profileAvatar || DEFAULT_AVATAR_FALLBACK}

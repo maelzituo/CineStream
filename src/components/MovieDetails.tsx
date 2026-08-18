@@ -152,8 +152,7 @@ export default function MovieDetails({
     >
       {/* Hero Banner Backdrop */}
       <section className="relative w-full h-[55vh] md:h-[70vh] overflow-hidden bg-brand-bg">
-        <img
-          referrerPolicy="no-referrer"
+        <img           referrerPolicy="no-referrer"
           src={backdropSrc}
           alt={movie.title}
           onError={(e) => {
@@ -181,8 +180,7 @@ export default function MovieDetails({
         <div className="flex flex-col md:flex-row gap-8 items-start">
           {/* Poster Card */}
           <div className="flex-none w-44 md:w-64 aspect-[2/3] rounded-2xl overflow-hidden border-2 border-white/15 shadow-2xl bg-surface-container relative group">
-            <img
-              referrerPolicy="no-referrer"
+            <img               referrerPolicy="no-referrer"
               src={movie.imageUrl || DEFAULT_POSTER_FALLBACK}
               alt={movie.title}
               onError={(e) => handleImageError(e, 'poster')}
@@ -315,8 +313,7 @@ export default function MovieDetails({
               {movie.cast.map((actor) => (
                 <div key={actor.id} className="flex-none w-24 text-center group">
                   <div className="w-20 h-20 md:w-24 md:h-24 rounded-full bg-surface-container border-2 border-white/15 mx-auto overflow-hidden group-hover:border-brand-red transition-all duration-300 shadow-md">
-                    <img
-                      referrerPolicy="no-referrer"
+                    <img                       referrerPolicy="no-referrer"
                       src={actor.imageUrl || DEFAULT_AVATAR_FALLBACK}
                       alt={actor.name}
                       onError={(e) => handleImageError(e, 'avatar')}
@@ -354,8 +351,7 @@ export default function MovieDetails({
                   className="group cursor-pointer space-y-2"
                 >
                   <div className="aspect-[2/3] rounded-xl overflow-hidden border border-white/10 bg-surface-container relative transition-all duration-300 group-hover:scale-105 group-hover:border-brand-red/50 group-hover:shadow-xl">
-                    <img
-                      referrerPolicy="no-referrer"
+                    <img                       referrerPolicy="no-referrer"
                       src={similar.imageUrl || DEFAULT_POSTER_FALLBACK}
                       alt={similar.title}
                       onError={(e) => handleImageError(e, 'poster')}
@@ -450,8 +446,7 @@ export default function MovieDetails({
               <div
                 className="glass-panel p-4 rounded-xl border border-white/5 flex gap-4 items-start group"
               >
-                <img
-                  referrerPolicy="no-referrer"
+                <img                   referrerPolicy="no-referrer"
                   src={user?.photoURL || DEFAULT_AVATAR_FALLBACK}
                   alt={user?.name || "User"}
                   onError={(e) => handleImageError(e, 'avatar')}

@@ -5,7 +5,7 @@
 
 import { useState } from 'react';
 import { motion } from 'motion/react';
-import { Play, Info, ThumbsUp, Sparkles } from 'lucide-react';
+import { Play, Info, ThumbsUp, Sparkles, Plus, Check } from 'lucide-react';
 import { Movie } from '../types';
 import { handleImageError, DEFAULT_BACKDROP_FALLBACK } from '../lib/imageFallback';
 
@@ -13,9 +13,11 @@ interface HeroProps {
   movie: Movie;
   onPlayClick: (movie: Movie) => void;
   onInfoClick: (movie: Movie) => void;
+  onSavedToggle?: (movie: Movie) => void;
+  isSaved?: boolean;
 }
 
-export default function Hero({ movie, onPlayClick, onInfoClick }: HeroProps) {
+export default function Hero({ movie, onPlayClick, onInfoClick, onSavedToggle, isSaved }: HeroProps) {
   const [backdropSrc, setBackdropSrc] = useState(
     movie.backdropUrl || movie.imageUrl || DEFAULT_BACKDROP_FALLBACK
   );
@@ -112,6 +114,25 @@ export default function Hero({ movie, onPlayClick, onInfoClick }: HeroProps) {
               <Info className="w-4 h-4 sm:w-4.5 sm:h-4.5 text-gray-200" />
               <span>MAIS DETALHES</span>
             </button>
+
+            {onSavedToggle && (
+              <button
+                onClick={() => onSavedToggle(movie)}
+                className={`p-3.5 rounded-xl flex items-center justify-center border transition-all duration-300 cursor-pointer active:scale-95 backdrop-blur-md shadow-lg ${
+                  isSaved
+                    ? 'bg-emerald-500/20 border-emerald-500/40 text-emerald-400'
+                    : 'bg-black/50 hover:bg-white/20 border-white/20 text-gray-200 hover:text-white'
+                }`}
+                title={isSaved ? 'Remover da minha lista' : 'Adicionar à minha lista'}
+                id="hero-save-button"
+              >
+                {isSaved ? (
+                  <Check className="w-5 h-5" />
+                ) : (
+                  <Plus className="w-5 h-5" />
+                )}
+              </button>
+            )}
           </div>
         </motion.div>
       </div>

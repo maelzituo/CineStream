@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://cine-stream-408d7.web.app/sitemap.xml

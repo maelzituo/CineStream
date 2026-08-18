@@ -23,6 +23,7 @@ import {
 import { useAuth, AuthModalView } from '../../context/AuthContext';
 import { validateEmail, validateName, validatePassword } from '../../lib/passwordUtils';
 import { SecurityLogger } from '../../lib/securityLogger';
+import { getFriendlyErrorMessage } from '../../lib/firebaseMessages';
 import PasswordStrengthMeter from './PasswordStrengthMeter';
 import AvatarPicker, { CINEMA_AVATARS } from './AvatarPicker';
 
@@ -117,7 +118,7 @@ export default function AuthModal() {
     try {
       await login(emailValidation.normalized, password);
     } catch (err: any) {
-      setErrorMessage(err.message || 'Falha ao autenticar.');
+      setErrorMessage(getFriendlyErrorMessage(err));
       // Atualiza lockout se disparou
       const lock = SecurityLogger.checkLockout(email);
       if (lock.isLocked) {
@@ -157,7 +158,7 @@ export default function AuthModal() {
     try {
       await register(nameValidation.sanitized, emailValidation.normalized, password, selectedAvatar);
     } catch (err: any) {
-      setErrorMessage(err.message || 'Erro ao criar conta.');
+      setErrorMessage(getFriendlyErrorMessage(err));
     } finally {
       setIsLoading(false);
     }
@@ -181,7 +182,7 @@ export default function AuthModal() {
         'Instruções enviadas! Caso o e-mail esteja cadastrado, você receberá um link seguro para redefinir sua senha em instantes.'
       );
     } catch (err: any) {
-      setErrorMessage(err.message || 'Erro ao processar solicitação.');
+      setErrorMessage(getFriendlyErrorMessage(err));
     } finally {
       setIsLoading(false);
     }
@@ -194,7 +195,7 @@ export default function AuthModal() {
     try {
       await loginWithGoogle();
     } catch (err: any) {
-      setErrorMessage(err.message || 'Não foi possível conectar com o Google.');
+      setErrorMessage(getFriendlyErrorMessage(err));
     } finally {
       setIsLoading(false);
     }

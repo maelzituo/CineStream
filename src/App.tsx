@@ -3,17 +3,18 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, lazy, Suspense } from 'react';
 import Header from './components/Header';
 import Hero from './components/Hero';
 import MovieShelf from './components/MovieShelf';
-import MovieDetails from './components/MovieDetails';
-import MyList from "./components/MyList";
-import CustomLists from "./components/CustomLists";
-import Profile from './components/Profile';
-import Search from './components/Search';
-import VideoPlayer from './components/VideoPlayer';
-import AuthModal from './components/auth/AuthModal';
+import { SkeletonShelf } from './components/SkeletonShelf';
+const MovieDetails = lazy(() => import('./components/MovieDetails'));
+const MyList = lazy(() => import("./components/MyList"));
+const CustomLists = lazy(() => import("./components/CustomLists"));
+const Profile = lazy(() => import('./components/Profile'));
+const Search = lazy(() => import('./components/Search'));
+const VideoPlayer = lazy(() => import('./components/VideoPlayer'));
+const AuthModal = lazy(() => import('./components/auth/AuthModal'));
 import PWAInstallBanner from './components/pwa/PWAInstallBanner';
 import PWAUpdateToast from './components/pwa/PWAUpdateToast';
 import OfflineIndicator from './components/pwa/OfflineIndicator';
@@ -299,6 +300,8 @@ function CineStreamApp() {
                   movie={heroMovie}
                   onPlayClick={handlePlayMovie}
                   onInfoClick={handleMovieSelect}
+                  onSavedToggle={handleSavedToggle}
+                  isSaved={savedIds.includes(heroMovie.id)}
                 />
 
                 {/* Fileiras do Catálogo */}
@@ -319,97 +322,108 @@ function CineStreamApp() {
                     </button>
                   </div>
 
-                  {/* Continuar Assistindo */}
-                  {continueWatchingMovies.length > 0 && (
-                    <MovieShelf
-                      title="Continuar Assistindo"
-                      movies={continueWatchingMovies}
-                      layout="landscape"
-                      onMovieClick={handleMovieSelect}
-                      onSavedToggle={handleSavedToggle}
-                      savedIds={savedIds}
-                    />
+                  {isCatalogLoading && trending.length === 0 ? (
+                    <div className="space-y-8">
+                      <SkeletonShelf title="Tendências" layout="poster" />
+                      <SkeletonShelf title="Filmes Populares" layout="poster" />
+                      <SkeletonShelf title="Séries Populares" layout="poster" />
+                      <SkeletonShelf title="Lançamentos" layout="landscape" />
+                    </div>
+                  ) : (
+                    <>
+                      {/* Continuar Assistindo */}
+                      {continueWatchingMovies.length > 0 && (
+                        <MovieShelf
+                          title="Continuar Assistindo"
+                          movies={continueWatchingMovies}
+                          layout="landscape"
+                          onMovieClick={handleMovieSelect}
+                          onSavedToggle={handleSavedToggle}
+                          savedIds={savedIds}
+                        />
+                      )}
+
+                      {/* Tendências (Trending) */}
+                      <MovieShelf
+                        title="Tendências do TMDb"
+                        movies={trending.length > 0 ? trending : MOVIES_DATABASE}
+                        layout="poster"
+                        onMovieClick={handleMovieSelect}
+                        onSavedToggle={handleSavedToggle}
+                        savedIds={savedIds}
+                      />
+
+                      {/* Filmes Populares */}
+                      <MovieShelf
+                        title="Filmes Populares"
+                        movies={popularMovies.length > 0 ? popularMovies : MOVIES_DATABASE}
+                        layout="poster"
+                        onMovieClick={handleMovieSelect}
+                        onSavedToggle={handleSavedToggle}
+                        savedIds={savedIds}
+                      />
+
+                      {/* Séries Populares */}
+                      <MovieShelf
+                        title="Séries Populares"
+                        movies={
+                          popularSeries.length > 0
+                            ? popularSeries
+                            : MOVIES_DATABASE.filter((m) => m.type === 'series')
+                        }
+                        layout="poster"
+                        onMovieClick={handleMovieSelect}
+                        onSavedToggle={handleSavedToggle}
+                        savedIds={savedIds}
+                      />
+
+                      {/* Lançamentos (Now Playing) */}
+                      <MovieShelf
+                        title="Lançamentos no Cinema"
+                        movies={nowPlayingMovies.length > 0 ? nowPlayingMovies : MOVIES_DATABASE}
+                        layout="landscape"
+                        onMovieClick={handleMovieSelect}
+                        onSavedToggle={handleSavedToggle}
+                        savedIds={savedIds}
+                      />
+
+                      {/* Mais Bem Avaliados */}
+                      <MovieShelf
+                        title="Mais Bem Avaliados"
+                        movies={topRatedMovies.length > 0 ? topRatedMovies : MOVIES_DATABASE}
+                        layout="poster"
+                        onMovieClick={handleMovieSelect}
+                        onSavedToggle={handleSavedToggle}
+                        savedIds={savedIds}
+                      />
+
+                      {/* Séries em Exibição */}
+                      <MovieShelf
+                        title="Séries em Exibição"
+                        movies={
+                          onTheAirSeries.length > 0
+                            ? onTheAirSeries
+                            : MOVIES_DATABASE.filter((m) => m.type === 'series')
+                        }
+                        layout="landscape"
+                        onMovieClick={handleMovieSelect}
+                        onSavedToggle={handleSavedToggle}
+                        savedIds={savedIds}
+                      />
+
+                      {/* Próximos Lançamentos */}
+                      <MovieShelf
+                        title="Próximos Lançamentos"
+                        movies={
+                          upcomingMovies.length > 0 ? upcomingMovies : MOVIES_DATABASE.slice(0, 5)
+                        }
+                        layout="poster"
+                        onMovieClick={handleMovieSelect}
+                        onSavedToggle={handleSavedToggle}
+                        savedIds={savedIds}
+                      />
+                    </>
                   )}
-
-                  {/* Tendências (Trending) */}
-                  <MovieShelf
-                    title="Tendências do TMDb"
-                    movies={trending.length > 0 ? trending : MOVIES_DATABASE}
-                    layout="poster"
-                    onMovieClick={handleMovieSelect}
-                    onSavedToggle={handleSavedToggle}
-                    savedIds={savedIds}
-                  />
-
-                  {/* Filmes Populares */}
-                  <MovieShelf
-                    title="Filmes Populares"
-                    movies={popularMovies.length > 0 ? popularMovies : MOVIES_DATABASE}
-                    layout="poster"
-                    onMovieClick={handleMovieSelect}
-                    onSavedToggle={handleSavedToggle}
-                    savedIds={savedIds}
-                  />
-
-                  {/* Séries Populares */}
-                  <MovieShelf
-                    title="Séries Populares"
-                    movies={
-                      popularSeries.length > 0
-                        ? popularSeries
-                        : MOVIES_DATABASE.filter((m) => m.type === 'series')
-                    }
-                    layout="poster"
-                    onMovieClick={handleMovieSelect}
-                    onSavedToggle={handleSavedToggle}
-                    savedIds={savedIds}
-                  />
-
-                  {/* Lançamentos (Now Playing) */}
-                  <MovieShelf
-                    title="Lançamentos no Cinema"
-                    movies={nowPlayingMovies.length > 0 ? nowPlayingMovies : MOVIES_DATABASE}
-                    layout="landscape"
-                    onMovieClick={handleMovieSelect}
-                    onSavedToggle={handleSavedToggle}
-                    savedIds={savedIds}
-                  />
-
-                  {/* Mais Bem Avaliados */}
-                  <MovieShelf
-                    title="Mais Bem Avaliados"
-                    movies={topRatedMovies.length > 0 ? topRatedMovies : MOVIES_DATABASE}
-                    layout="poster"
-                    onMovieClick={handleMovieSelect}
-                    onSavedToggle={handleSavedToggle}
-                    savedIds={savedIds}
-                  />
-
-                  {/* Séries em Exibição */}
-                  <MovieShelf
-                    title="Séries em Exibição"
-                    movies={
-                      onTheAirSeries.length > 0
-                        ? onTheAirSeries
-                        : MOVIES_DATABASE.filter((m) => m.type === 'series')
-                    }
-                    layout="landscape"
-                    onMovieClick={handleMovieSelect}
-                    onSavedToggle={handleSavedToggle}
-                    savedIds={savedIds}
-                  />
-
-                  {/* Próximos Lançamentos */}
-                  <MovieShelf
-                    title="Próximos Lançamentos"
-                    movies={
-                      upcomingMovies.length > 0 ? upcomingMovies : MOVIES_DATABASE.slice(0, 5)
-                    }
-                    layout="poster"
-                    onMovieClick={handleMovieSelect}
-                    onSavedToggle={handleSavedToggle}
-                    savedIds={savedIds}
-                  />
 
                   {/* Seção Google Drive */}
                   <div className="space-y-4">
@@ -522,39 +536,46 @@ function CineStreamApp() {
 
             {/* Aba Busca */}
             {currentTab === 'busca' && (
-              <Search movies={moviesWithProgress} onMovieClick={handleMovieSelect} />
+              <Suspense fallback={<div className="pt-24 text-center text-gray-400"><div className="animate-pulse w-8 h-8 mx-auto border-4 border-brand-red border-t-transparent rounded-full"></div></div>}>
+                <Search movies={moviesWithProgress} onMovieClick={handleMovieSelect} />
+              </Suspense>
             )}
 
             {/* Aba Minha Lista */}
             {currentTab === 'lista' && (
               <div className="min-h-screen bg-brand-bg pt-24 px-6 md:px-16 pb-32 space-y-12 animate-in fade-in zoom-in-95 duration-300">
-                <CustomLists onNavigateToMovie={handleMovieSelect} />
-                <div className="border-t border-white/10" />
-                <MyList
+                <Suspense fallback={<div className="pt-24 text-center text-gray-400"><div className="animate-pulse w-8 h-8 mx-auto border-4 border-brand-red border-t-transparent rounded-full"></div></div>}>
+                  <CustomLists onNavigateToMovie={handleMovieSelect} />
+                  <div className="border-t border-white/10" />
+                  <MyList
                   savedMovies={savedMovies}
                   onMovieClick={handleMovieSelect}
                   onRemoveFromList={handleRemoveFromList}
                   onNavigateHome={() => handleTabChange('inicio')}
                 />
+                </Suspense>
               </div>
             )}
 
             {/* Aba Perfil */}
             {currentTab === 'perfil' && (
-              <Profile
+              <Suspense fallback={<div className="pt-24 text-center text-gray-400"><div className="animate-pulse w-8 h-8 mx-auto border-4 border-brand-red border-t-transparent rounded-full"></div></div>}>
+                <Profile
                 onLogout={handleGoogleSignOut}
                 gdriveUser={user}
                 onGoogleSignIn={handleGoogleSignIn}
                 onGoogleSignOut={handleGoogleSignOut}
                 savedCount={savedIds.length}
               />
+              </Suspense>
             )}
           </>
         )}
 
         {/* Detalhes do Filme ou Série */}
         {activeMovieDetail && !playingMovie && (
-          <MovieDetails
+          <Suspense fallback={null}>
+            <MovieDetails
             movie={activeMovieDetail}
             onBack={handleBackFromDetails}
             onPlayClick={handlePlayMovie}
@@ -562,22 +583,27 @@ function CineStreamApp() {
             savedIds={savedIds}
             onNavigateToMovie={handleNavigateToMovieInDetails}
           />
+          </Suspense>
         )}
       </main>
 
       {/* Player de Vídeo em Tela Cheia */}
       {playingMovie && (
-        <VideoPlayer 
+        <Suspense fallback={<div className="fixed inset-0 z-50 bg-black flex items-center justify-center"><div className="w-12 h-12 border-4 border-brand-red border-t-transparent rounded-full animate-spin"></div></div>}>
+          <VideoPlayer 
           movie={playingMovie} 
           onClose={() => setPlayingMovie(null)} 
           onProgressUpdate={(progress, seconds) => {
             if (user) updateHistory(playingMovie.id, progress, seconds);
           }}
         />
+        </Suspense>
       )}
 
       {/* Modal Universal de Autenticação */}
-      <AuthModal />
+      <Suspense fallback={null}>
+        <AuthModal />
+      </Suspense>
 
       {/* PWA Components */}
       <OfflineIndicator />

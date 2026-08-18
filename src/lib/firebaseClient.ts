@@ -20,7 +20,7 @@ const firebaseConfig = {
   messagingSenderId: rawEnv.VITE_FIREBASE_MESSAGING_SENDER_ID || safeFallback.messagingSenderId,
   appId: rawEnv.VITE_FIREBASE_APP_ID || safeFallback.appId,
   firestoreRegion: safeFallback.firestoreRegion,
-  firestoreDatabaseId: safeFallback.firestoreDatabaseId,
+  firestoreDatabaseId: safeFallback.firestoreDatabaseId === '(default)' ? undefined : safeFallback.firestoreDatabaseId,
 };
 
 export const firebaseApp: FirebaseApp =

@@ -1,12 +1,11 @@
 {
   "projectId": "cine-stream-408d7",
-  "appId": "1:1040657689849:web:9d0c160e14454654528628",
+  "appId": "1:1040657689849:web:2fb49cf4c8fd328b528628",
   "apiKey": "AIzaSyADw0WkKNVkGWkjxakC75_qexwLRNIwyh8",
   "authDomain": "cine-stream-408d7.firebaseapp.com",
-  "firestoreDatabaseId": "(default)",
+  "firestoreDatabaseId": "ai-studio-cinestream-66384a9a-6e2c-4848-8a5f-25a974d57716",
   "storageBucket": "cine-stream-408d7.firebasestorage.app",
   "messagingSenderId": "1040657689849",
-  "measurementId": "G-9GEWNWTPBT",
-  "oAuthClientId": "",
+  "measurementId": "",
   "recaptchaSiteKey": ""
 }

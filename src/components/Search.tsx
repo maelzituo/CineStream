@@ -291,15 +291,49 @@ export default function Search({ movies: initialMovies, onMovieClick }: SearchPr
           </section>
         )}
 
-        {/* Indicador de Carregamento */}
+        {/* Indicador de Carregamento / Skeleton Grid */}
         {isLoading && page === 1 && (
-          <div className="flex justify-center py-12">
-            <Loader2 className="w-8 h-8 text-brand-red animate-spin" />
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-6 pt-4">
+            {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((i) => (
+              <div key={i} className="space-y-2">
+                <div className="aspect-[2/3] rounded-2xl bg-white/5 animate-pulse border border-white/5" />
+                <div className="h-3 w-3/4 bg-white/10 rounded animate-pulse" />
+                <div className="h-2 w-1/2 bg-white/5 rounded animate-pulse" />
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Empty State */}
+        {!isLoading && displayMovies.length === 0 && (
+          <div className="flex flex-col items-center justify-center text-center py-20 px-4 space-y-4">
+            <div className="w-16 h-16 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-gray-500 shadow-inner">
+              <Film className="w-8 h-8 text-brand-red opacity-80" />
+            </div>
+            <div className="space-y-1 max-w-md">
+              <h3 className="text-white font-display font-bold text-lg">
+                Nenhum resultado encontrado
+              </h3>
+              <p className="text-xs sm:text-sm text-gray-400">
+                Não encontramos títulos para &quot;{query || selectedGenre.name}&quot;. Tente buscar por outros termos, atores ou gêneros.
+              </p>
+            </div>
+            {(query || selectedGenre.id) && (
+              <button
+                onClick={() => {
+                  setQuery('');
+                  setSelectedGenre(GENRE_TAGS[0]);
+                }}
+                className="px-5 py-2.5 bg-white/10 hover:bg-white/15 text-white text-xs font-display font-bold tracking-wider rounded-xl transition-all cursor-pointer active:scale-95"
+              >
+                LIMPAR FILTROS
+              </button>
+            )}
           </div>
         )}
 
         {/* Grid de Resultados */}
-        {(!isLoading || page > 1) && (
+        {(!isLoading || page > 1) && displayMovies.length > 0 && (
           <section className="space-y-6">
             <div className="flex justify-between items-center text-xs text-gray-400 font-sans">
               <span>

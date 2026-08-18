@@ -1,0 +1,8 @@
+/* TEAM */
+Developer: Ismael Duarte
+Contact: ismaelduarteorrico@gmail.com
+
+/* SITE */
+Last update: 2026-08-18
+Standards: HTML5, CSS3, ES6
+Components: React, Vite, Tailwind CSS, Firebase

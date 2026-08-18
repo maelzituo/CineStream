@@ -1,0 +1,3 @@
+# CineStream
+CineStream is a modern, premium movie and series streaming catalog built with React, Vite, Tailwind CSS, and Firebase.
+It features user authentication, a personalized "My List", cross-device watch history, and integrates with the TMDb API for real-time catalog data.

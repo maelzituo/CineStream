@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-export type ProviderId = 'vidsrcme' | 'vidsrcto' | 'vidsrcpro' | 'embedsu' | 'cdnembed';
+export type ProviderId = 'vidsrcto' | 'cdnembed' | 'vidsrcme';
 
 export interface EmbedProvider {
   id: ProviderId;
@@ -18,34 +18,22 @@ export interface EmbedProvider {
 export class EmbedService {
   public static readonly PROVIDERS: EmbedProvider[] = [
     {
-      id: 'vidsrcme',
-      name: 'VidSrc (Servidor 1)',
-      getMovieUrl: (id) => `https://vidsrc.me/embed/movie?tmdb=${id}`,
-      getSeriesUrl: (id, s, e) => `https://vidsrc.me/embed/tv?tmdb=${id}&season=${s}&episode=${e}`
-    },
-    {
       id: 'vidsrcto',
-      name: 'VidSrc.to (Servidor 2)',
+      name: 'VidSrc.to (Servidor Principal)',
       getMovieUrl: (id) => `https://vidsrc.to/embed/movie/${id}`,
       getSeriesUrl: (id, s, e) => `https://vidsrc.to/embed/tv/${id}/${s}/${e}`
     },
     {
-      id: 'vidsrcpro',
-      name: 'VidSrc Pro (Servidor 3)',
-      getMovieUrl: (id) => `https://vidsrc.pro/embed/movie/${id}`,
-      getSeriesUrl: (id, s, e) => `https://vidsrc.pro/embed/tv/${id}/${s}/${e}`
-    },
-    {
-      id: 'embedsu',
-      name: 'Embed.su (Servidor 4)',
-      getMovieUrl: (id) => `https://embed.su/embed/movie/${id}`,
-      getSeriesUrl: (id, s, e) => `https://embed.su/embed/tv/${id}/${s}/${e}`
-    },
-    {
       id: 'cdnembed',
-      name: 'CDN Embed (Servidor 5)',
+      name: 'CDN Embed (Servidor Secundário)',
       getMovieUrl: (id) => `https://cdn-embed.com/filme/${id}`,
       getSeriesUrl: (id, s, e) => `https://cdn-embed.com/serie/${id}/${s}/${e}`
+    },
+    {
+      id: 'vidsrcme',
+      name: 'VidSrc ME (Servidor Alternativo)',
+      getMovieUrl: (id) => `https://vidsrc.me/embed/movie?tmdb=${id}`,
+      getSeriesUrl: (id, s, e) => `https://vidsrc.me/embed/tv?tmdb=${id}&season=${s}&episode=${e}`
     }
   ];
 
