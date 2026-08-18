@@ -23,11 +23,12 @@ import {
 } from 'lucide-react';
 import { Movie } from '../types';
 import { MOVIES_DATABASE } from '../data/movies';
-import { db, MovieReview } from '../lib/database';
 import { handleImageError, DEFAULT_BACKDROP_FALLBACK, DEFAULT_POSTER_FALLBACK, DEFAULT_AVATAR_FALLBACK } from '../lib/imageFallback';
 import { useAuth } from '../context/AuthContext';
+import { useRatings } from '../hooks/useRatings';
 import MovieRepository from '../services/movieRepository';
 import SeriesRepository from '../services/seriesRepository';
+import AddToListModal from './AddToListModal';
 
 interface MovieDetailsProps {
   movie: Movie;
@@ -49,6 +50,7 @@ export default function MovieDetails({
   const { user } = useAuth();
   const [movie, setMovie] = useState<Movie>(initialMovie);
   const [showTrailerModal, setShowTrailerModal] = useState(false);
+  const [showAddToListModal, setShowAddToListModal] = useState(false);
   const [backdropSrc, setBackdropSrc] = useState(
     initialMovie.backdropUrl || initialMovie.imageUrl || DEFAULT_BACKDROP_FALLBACK
   );
@@ -90,39 +92,32 @@ export default function MovieDetails({
   const isSaved = savedIds.includes(movie.id);
 
   // Estados de Avaliações / Comentários no Banco de Dados Local
-  const [reviews, setReviews] = useState<MovieReview[]>([]);
+  // Ratings
+  const { addRating, removeRating, getRating } = useRatings();
+  
   const [newComment, setNewComment] = useState('');
   const [newRating, setNewRating] = useState(10);
   const [submittingReview, setSubmittingReview] = useState(false);
 
-  const loadReviews = async () => {
-    try {
-      const dbReviews = await db.getReviews(movie.id);
-      setReviews(dbReviews);
-    } catch (e) {
-      console.error('Erro ao buscar avaliações:', e);
-    }
-  };
+  const existingRating = getRating(movie.id);
 
   useEffect(() => {
-    loadReviews();
-  }, [movie.id]);
+    if (existingRating) {
+      setNewComment(existingRating.review);
+      setNewRating(existingRating.rating);
+    } else {
+      setNewComment('');
+      setNewRating(10);
+    }
+  }, [movie.id, existingRating]);
 
   const handleAddReview = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newComment.trim() || submittingReview) return;
+    if (!newComment.trim() || submittingReview || !user) return;
 
     try {
       setSubmittingReview(true);
-      
-      const userName = user?.displayName || user?.email?.split('@')[0] || 'Usuário CineStream';
-      const userAvatar = user?.photoURL || DEFAULT_AVATAR_FALLBACK;
-      const userId = user?.uid;
-
-      await db.addReview(movie.id, newRating, newComment, userName, userAvatar, userId);
-      setNewComment('');
-      setNewRating(10);
-      await loadReviews();
+      await addRating(movie.id, newRating, newComment);
     } catch (error) {
       console.error('Falha ao registrar crítica no banco de dados:', error);
     } finally {
@@ -130,10 +125,11 @@ export default function MovieDetails({
     }
   };
 
-  const handleDeleteReview = async (id: string) => {
+  const handleDeleteReview = async () => {
     try {
-      await db.deleteReview(id);
-      await loadReviews();
+      await removeRating(movie.id);
+      setNewComment('');
+      setNewRating(10);
     } catch (error) {
       console.error('Falha ao deletar crítica:', error);
     }
@@ -270,20 +266,19 @@ export default function MovieDetails({
 
               <button
                 onClick={() => onSavedToggle(movie)}
-                className="bg-black/40 hover:bg-white/15 border border-white/20 text-white font-display font-bold text-xs sm:text-sm tracking-wider py-3.5 px-6 sm:px-8 rounded-xl flex items-center justify-center gap-2 active:scale-95 transition-all cursor-pointer backdrop-blur-md"
-                id="details-save-button"
+                className="bg-black/40 hover:bg-white/15 border border-white/20 text-white font-display font-bold text-xs sm:text-sm tracking-wider py-3.5 px-4 sm:px-6 rounded-xl flex items-center justify-center gap-2 active:scale-95 transition-all cursor-pointer backdrop-blur-md"
+                title="Favoritos"
               >
-                {isSaved ? (
-                  <>
-                    <Check className="w-4 h-4 text-emerald-400" />
-                    <span>Na Lista</span>
-                  </>
-                ) : (
-                  <>
-                    <Plus className="w-4 h-4 text-white" />
-                    <span>Minha Lista</span>
-                  </>
-                )}
+                {isSaved ? <Check className="w-4 h-4 text-emerald-400" /> : <Plus className="w-4 h-4 text-white" />}
+                <span className="hidden sm:inline">{isSaved ? 'Favorito' : 'Favoritos'}</span>
+              </button>
+              
+              <button
+                onClick={() => setShowAddToListModal(true)}
+                className="bg-black/40 hover:bg-white/15 border border-white/20 text-white font-display font-bold text-xs sm:text-sm tracking-wider py-3.5 px-4 sm:px-6 rounded-xl flex items-center justify-center gap-2 active:scale-95 transition-all cursor-pointer backdrop-blur-md"
+              >
+                <Database className="w-4 h-4 text-white" />
+                <span className="hidden sm:inline">Salvar em Lista</span>
               </button>
             </div>
           </div>
@@ -396,14 +391,16 @@ export default function MovieDetails({
             </div>
             <span className="flex items-center gap-1 text-[10px] font-mono text-gray-400 bg-white/5 border border-white/10 px-2.5 py-1 rounded">
               <Database className="w-3 h-3 text-brand-red" />
-              {reviews.length} {reviews.length === 1 ? 'registro' : 'registros'}
+              Sua Avaliação Privada
             </span>
           </div>
 
           {/* Form de Críticas */}
           <form onSubmit={handleAddReview} className="glass-panel p-5 rounded-2xl border border-white/10 space-y-4">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-              <span className="text-xs font-sans text-gray-300 font-bold">Sua nota para este título:</span>
+              <span className="text-xs font-sans text-gray-300 font-bold">
+                {existingRating ? 'Sua nota salva:' : 'Sua nota para este título:'}
+              </span>
               <div className="flex flex-wrap items-center gap-1.5">
                 {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((num) => (
                   <button
@@ -441,56 +438,53 @@ export default function MovieDetails({
             </div>
           </form>
 
-          {/* Lista de Avaliações */}
-          <div className="space-y-3 max-h-[350px] overflow-y-auto hide-scrollbar pr-1">
-            {reviews.length === 0 ? (
+          {/* Avaliação Salva */}
+          <div className="space-y-3">
+            {!existingRating ? (
               <div className="text-center py-8 glass-panel rounded-xl border border-dashed border-white/5">
                 <p className="font-sans text-xs text-gray-500">
-                  Nenhum comentário ainda. Seja o primeiro a comentar!
+                  Nenhum comentário ainda. Avalie e guarde no seu perfil!
                 </p>
               </div>
             ) : (
-              reviews.map((review) => (
-                <div
-                  key={review.id}
-                  className="glass-panel p-4 rounded-xl border border-white/5 flex gap-4 items-start group"
-                >
-                  <img
-                    referrerPolicy="no-referrer"
-                    src={review.userAvatar || DEFAULT_AVATAR_FALLBACK}
-                    alt={review.userName}
-                    onError={(e) => handleImageError(e, 'avatar')}
-                    className="w-10 h-10 rounded-full border border-white/10 object-cover bg-surface-container"
-                  />
-                  <div className="flex-1 min-w-0 space-y-1.5">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <span className="font-sans font-bold text-xs text-white truncate">
-                          {review.userName}
-                        </span>
-                        <span className="text-[10px] text-gray-500 font-mono">
-                          {new Date(review.createdAt).toLocaleDateString('pt-BR')}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-1 text-xs font-black text-brand-red bg-brand-red/10 px-2 py-0.5 rounded border border-brand-red/20">
-                        <Star className="w-3 h-3 fill-brand-red" />
-                        {review.rating}/10
-                      </div>
+              <div
+                className="glass-panel p-4 rounded-xl border border-white/5 flex gap-4 items-start group"
+              >
+                <img
+                  referrerPolicy="no-referrer"
+                  src={user?.photoURL || DEFAULT_AVATAR_FALLBACK}
+                  alt={user?.name || "User"}
+                  onError={(e) => handleImageError(e, 'avatar')}
+                  className="w-10 h-10 rounded-full border border-white/10 object-cover bg-surface-container"
+                />
+                <div className="flex-1 min-w-0 space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="font-sans font-bold text-xs text-white truncate">
+                        {user?.name || "Você"}
+                      </span>
+                      <span className="text-[10px] text-gray-500 font-mono">
+                        {new Date(existingRating.updatedAt).toLocaleDateString('pt-BR')}
+                      </span>
                     </div>
-                    <p className="font-sans text-xs md:text-sm text-gray-300 leading-relaxed break-words">
-                      {review.comment}
-                    </p>
+                    <div className="flex items-center gap-1 text-xs font-black text-brand-red bg-brand-red/10 px-2 py-0.5 rounded border border-brand-red/20">
+                      <Star className="w-3 h-3 fill-brand-red" />
+                      {existingRating.rating}/10
+                    </div>
                   </div>
-
-                  <button
-                    onClick={() => handleDeleteReview(review.id)}
-                    className="opacity-0 group-hover:opacity-100 p-2 text-gray-500 hover:text-brand-red hover:bg-brand-red/10 rounded-lg transition-all cursor-pointer"
-                    title="Excluir"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
+                  <p className="font-sans text-xs md:text-sm text-gray-300 leading-relaxed break-words">
+                    {existingRating.review}
+                  </p>
                 </div>
-              ))
+
+                <button
+                  onClick={handleDeleteReview}
+                  className="opacity-0 group-hover:opacity-100 p-2 text-gray-500 hover:text-brand-red hover:bg-brand-red/10 rounded-lg transition-all cursor-pointer"
+                  title="Excluir"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              </div>
             )}
           </div>
         </div>

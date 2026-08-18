@@ -159,14 +159,14 @@ export default function Header({
             className={`flex items-center gap-2 p-0.5 rounded-full border-2 transition-all cursor-pointer focus:outline-none relative group ${
               currentTab === 'perfil' ? 'border-brand-red shadow-md shadow-brand-red/30' : 'border-white/20 hover:border-brand-red'
             }`}
-            title={user.displayName || 'Meu Perfil'}
+            title={user.name || 'Meu Perfil'}
             id="header-profile-btn"
           >
             <div className="w-8 h-8 rounded-full overflow-hidden relative bg-surface-container">
               <img
                 referrerPolicy="no-referrer"
                 className="w-full h-full object-cover transition-transform group-hover:scale-110"
-                alt={user.displayName || 'Avatar'}
+                alt={user.name || 'Avatar'}
                 src={user.photoURL || DEFAULT_AVATAR_FALLBACK}
                 onError={(e) => handleImageError(e, 'avatar')}
               />

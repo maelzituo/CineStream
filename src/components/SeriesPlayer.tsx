@@ -22,12 +22,13 @@ import EmbedService from '../services/embedService';
 interface SeriesPlayerProps {
   movie: Movie;
   onClose: () => void;
+  onProgressUpdate?: (progress: number, seconds: number) => void;
 }
 
 /**
  * Componente SeriesPlayer - Responsável por reproduzir episódios de séries via iframe EmbedMovies.
  */
-export default function SeriesPlayer({ movie, onClose }: SeriesPlayerProps) {
+export default function SeriesPlayer({ movie, onClose, onProgressUpdate }: SeriesPlayerProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const iframeRef = useRef<HTMLIFrameElement>(null);
 
@@ -49,8 +50,12 @@ export default function SeriesPlayer({ movie, onClose }: SeriesPlayerProps) {
   // Validação do TMDb ID da série
   const tmdbId = movie.tmdbId;
   const isValidId = EmbedService.isValidTmdbId(tmdbId);
+  
+  const [selectedProviderIndex, setSelectedProviderIndex] = useState(0);
+  const currentProvider = EmbedService.PROVIDERS[selectedProviderIndex];
+
   const playerUrl = isValidId
-    ? EmbedService.getSeriesEmbedUrl(tmdbId!, currentSeason, currentEpisode)
+    ? currentProvider.getSeriesUrl(tmdbId!, currentSeason, currentEpisode)
     : null;
 
   // Recarrega o player quando a temporada ou episódio altera
@@ -151,6 +156,24 @@ export default function SeriesPlayer({ movie, onClose }: SeriesPlayerProps) {
 
         {/* Seletores de Temporada e Episódio + Ações */}
         <div className="flex flex-wrap items-center gap-2 md:gap-3 w-full sm:w-auto justify-between sm:justify-end">
+          {/* Seletor de Servidor */}
+          {isValidId && (
+            <div className="relative">
+              <select
+                value={selectedProviderIndex}
+                onChange={(e) => setSelectedProviderIndex(Number(e.target.value))}
+                className="appearance-none bg-black/60 border border-white/20 text-white text-xs rounded-lg pl-3 pr-8 py-2 md:py-2.5 focus:outline-none focus:border-brand-red cursor-pointer"
+              >
+                {EmbedService.PROVIDERS.map((provider, index) => (
+                  <option key={provider.id} value={index}>
+                    {provider.name}
+                  </option>
+                ))}
+              </select>
+              <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+            </div>
+          )}
+
           {/* Seletor de Temporadas */}
           <div className="relative">
             <select
@@ -289,7 +312,7 @@ export default function SeriesPlayer({ movie, onClose }: SeriesPlayerProps) {
                   Carregando Temp {currentSeason} • Epi {currentEpisode}
                 </p>
                 <p className="text-xs text-gray-400 font-mono">
-                  https://cdn-embed.com/serie/{tmdbId}/{currentSeason}/{currentEpisode}
+                  {currentProvider?.name || 'Servidor Externo'} ({tmdbId})
                 </p>
               </div>
             </motion.div>

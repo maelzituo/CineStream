@@ -4,14 +4,13 @@
  */
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { AuthUser, SecurityEvent } from '../types';
-import { AuthService } from '../lib/authService';
-import { SecurityLogger } from '../lib/securityLogger';
+import { UserDocument } from '../types/models';
+import AuthService from '../services/auth/authService';
 
 export type AuthModalView = 'login' | 'register' | 'forgot_password';
 
 interface AuthContextType {
-  user: AuthUser | null;
+  user: UserDocument | null;
   loading: boolean;
   driveToken: string | null;
   isAuthModalOpen: boolean;
@@ -21,40 +20,29 @@ interface AuthContextType {
   setAuthModalView: (view: AuthModalView) => void;
   login: (email: string, password: string) => Promise<void>;
   register: (name: string, email: string, password: string, photoURL?: string) => Promise<void>;
-  loginWithGoogle: () => Promise<string | null>;
+  loginWithGoogle: () => Promise<void>;
   logout: () => Promise<void>;
   requestPasswordReset: (email: string) => Promise<void>;
-  changePassword: (currentPass: string, newPass: string) => Promise<void>;
   updateProfile: (name: string, photoURL?: string) => Promise<void>;
-  securityLogs: SecurityEvent[];
-  refreshSecurityLogs: () => void;
+  deleteAccount: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<AuthUser | null>(null);
+  const [user, setUser] = useState<UserDocument | null>(null);
   const [loading, setLoading] = useState(true);
   const [driveToken, setDriveToken] = useState<string | null>(null);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [authModalView, setAuthModalView] = useState<AuthModalView>('login');
-  const [securityLogs, setSecurityLogs] = useState<SecurityEvent[]>(() => SecurityLogger.getLogs());
 
-  const refreshSecurityLogs = useCallback(() => {
-    setSecurityLogs(SecurityLogger.getLogs());
-  }, []);
-
-  // Observa mudanças de estado na autenticação Firebase
   useEffect(() => {
     const unsubscribe = AuthService.onAuthState((authUser) => {
       setUser(authUser);
       setLoading(false);
-      setDriveToken(AuthService.getDriveToken());
-      refreshSecurityLogs();
     });
-
     return () => unsubscribe();
-  }, [refreshSecurityLogs]);
+  }, []);
 
   const openAuthModal = useCallback((view: AuthModalView = 'login') => {
     setAuthModalView(view);
@@ -66,49 +54,39 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const login = async (email: string, password: string) => {
-    const loggedUser = await AuthService.login(email, password);
-    setUser(loggedUser);
-    refreshSecurityLogs();
+    await AuthService.login(email, password);
     closeAuthModal();
   };
 
   const register = async (name: string, email: string, password: string, photoURL?: string) => {
-    const newUser = await AuthService.register(name, email, password, photoURL);
-    setUser(newUser);
-    refreshSecurityLogs();
+    await AuthService.register(name, email, password);
+    if (photoURL) {
+      await AuthService.updateProfile(name, photoURL);
+    }
     closeAuthModal();
   };
 
-  const loginWithGoogle = async (): Promise<string | null> => {
-    const { user: loggedUser, accessToken } = await AuthService.loginWithGoogle();
-    setUser(loggedUser);
-    setDriveToken(accessToken || null);
-    refreshSecurityLogs();
+  const loginWithGoogle = async () => {
+    const token = await AuthService.loginWithGoogle();
+    if (token) setDriveToken(token);
     closeAuthModal();
-    return accessToken || null;
   };
 
   const logout = async () => {
     await AuthService.logout();
-    setUser(null);
     setDriveToken(null);
-    refreshSecurityLogs();
   };
 
   const requestPasswordReset = async (email: string) => {
-    await AuthService.requestPasswordReset(email);
-    refreshSecurityLogs();
-  };
-
-  const changePassword = async (currentPass: string, newPass: string) => {
-    await AuthService.changePassword(currentPass, newPass);
-    refreshSecurityLogs();
+    await AuthService.resetPassword(email);
   };
 
   const updateProfile = async (name: string, photoURL?: string) => {
-    const updated = await AuthService.updateProfileData(name, photoURL);
-    setUser(updated);
-    refreshSecurityLogs();
+    await AuthService.updateProfile(name, photoURL);
+  };
+
+  const deleteAccount = async () => {
+    await AuthService.deleteAccount();
   };
 
   return (
@@ -127,10 +105,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         loginWithGoogle,
         logout,
         requestPasswordReset,
-        changePassword,
         updateProfile,
-        securityLogs,
-        refreshSecurityLogs,
+        deleteAccount
       }}
     >
       {children}
@@ -145,3 +121,4 @@ export const useAuth = (): AuthContextType => {
   }
   return context;
 };
+

@@ -21,12 +21,13 @@ import EmbedService from '../services/embedService';
 interface MoviePlayerProps {
   movie: Movie;
   onClose: () => void;
+  onProgressUpdate?: (progress: number, seconds: number) => void;
 }
 
 /**
  * Componente MoviePlayer - Responsável por reproduzir filmes via iframe EmbedMovies.
  */
-export default function MoviePlayer({ movie, onClose }: MoviePlayerProps) {
+export default function MoviePlayer({ movie, onClose, onProgressUpdate }: MoviePlayerProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const iframeRef = useRef<HTMLIFrameElement>(null);
 
@@ -36,14 +37,25 @@ export default function MoviePlayer({ movie, onClose }: MoviePlayerProps) {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isLandscape, setIsLandscape] = useState(false);
 
+  // Verifica se o filme possui um link de vídeo direto (ex: Google Drive)
+  const isDirectVideo = !!movie.videoUrl;
+
   // Verifica se o filme possui um TMDb ID válido
   const tmdbId = movie.tmdbId;
   const isValidId = EmbedService.isValidTmdbId(tmdbId);
-  const playerUrl = isValidId ? EmbedService.getMovieEmbedUrl(tmdbId!) : null;
+  
+  const [selectedProviderIndex, setSelectedProviderIndex] = useState(0);
+  const currentProvider = EmbedService.PROVIDERS[selectedProviderIndex];
+  const playerUrl = isValidId ? currentProvider.getMovieUrl(tmdbId!) : null;
 
   // Gerencia o timeout do carregamento do player
   useEffect(() => {
-    if (!isValidId) {
+    if (!isValidId && !isDirectVideo) {
+      setIsLoading(false);
+      return;
+    }
+
+    if (isDirectVideo) {
       setIsLoading(false);
       return;
     }
@@ -138,6 +150,21 @@ export default function MoviePlayer({ movie, onClose }: MoviePlayerProps) {
 
         {/* Botões de Ação do Player */}
         <div className="flex items-center gap-2 md:gap-3">
+          {/* Seletor de Servidor */}
+          {isValidId && !isDirectVideo && (
+            <select
+              value={selectedProviderIndex}
+              onChange={(e) => setSelectedProviderIndex(Number(e.target.value))}
+              className="bg-black/60 border border-white/20 text-white text-xs rounded-lg px-2 py-2 md:px-3 focus:outline-none focus:border-brand-red cursor-pointer"
+            >
+              {EmbedService.PROVIDERS.map((provider, index) => (
+                <option key={provider.id} value={index}>
+                  {provider.name}
+                </option>
+              ))}
+            </select>
+          )}
+
           {/* Rotação / Orientação */}
           <button
             onClick={toggleOrientation}
@@ -169,8 +196,8 @@ export default function MoviePlayer({ movie, onClose }: MoviePlayerProps) {
 
       {/* ÁREA PRINCIPAL DO PLAYER */}
       <div className="relative w-full h-full flex items-center justify-center bg-black">
-        {/* Caso não possua TMDb ID válido */}
-        {!isValidId && (
+        {/* Caso não possua TMDb ID nem vídeo direto */}
+        {!isValidId && !isDirectVideo && (
           <div className="text-center px-6 py-12 max-w-md glass-panel rounded-2xl border border-white/10 space-y-4 m-4">
             <div className="w-16 h-16 rounded-full bg-amber-500/15 text-amber-400 flex items-center justify-center mx-auto border border-amber-500/30">
               <Film className="w-8 h-8" />
@@ -178,7 +205,7 @@ export default function MoviePlayer({ movie, onClose }: MoviePlayerProps) {
             <div className="space-y-2">
               <h3 className="text-white font-display font-black text-lg">Vídeo Indisponível</h3>
               <p className="text-gray-400 text-xs font-sans leading-relaxed">
-                Este título ainda não possui um ID do TMDb cadastrado para gerar o player do EmbedMovies.
+                Este título ainda não possui um ID do TMDb cadastrado nem link direto para reprodução.
               </p>
             </div>
             <button
@@ -190,8 +217,28 @@ export default function MoviePlayer({ movie, onClose }: MoviePlayerProps) {
           </div>
         )}
 
-        {/* Caso ocorra erro no carregamento do player */}
-        {isValidId && hasError && (
+        {/* Player HTML5 (Google Drive, Sem Anúncios) */}
+        {isDirectVideo && (
+          <video
+            autoPlay
+            controls
+            playsInline
+            src={movie.videoUrl}
+            className="w-full h-full object-contain bg-black"
+            onTimeUpdate={(e) => {
+              const target = e.target as HTMLVideoElement;
+              if (onProgressUpdate && target.duration) {
+                const percent = Math.round((target.currentTime / target.duration) * 100);
+                // Throttle updates? The App layer can throttle or we can just send it.
+                // We'll just send it, let the hook or user throttle if needed.
+                onProgressUpdate(percent, Math.round(target.currentTime));
+              }
+            }}
+          />
+        )}
+
+        {/* Caso ocorra erro no carregamento do player iframe */}
+        {isValidId && !isDirectVideo && hasError && (
           <div className="text-center px-6 py-12 max-w-md glass-panel rounded-2xl border border-red-500/20 space-y-5 m-4 z-20">
             <div className="w-16 h-16 rounded-full bg-brand-red/15 text-brand-red flex items-center justify-center mx-auto border border-brand-red/30">
               <AlertCircle className="w-8 h-8" />
@@ -222,7 +269,7 @@ export default function MoviePlayer({ movie, onClose }: MoviePlayerProps) {
 
         {/* Animação de Carregamento (Loading State) */}
         <AnimatePresence>
-          {isValidId && isLoading && !hasError && (
+          {isValidId && !isDirectVideo && isLoading && !hasError && (
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -240,14 +287,16 @@ export default function MoviePlayer({ movie, onClose }: MoviePlayerProps) {
                 <p className="text-white font-display font-extrabold text-sm tracking-wider uppercase">
                   Carregando Player Embed
                 </p>
-                <p className="text-xs text-gray-400 font-mono">https://cdn-embed.com/filme/{tmdbId}</p>
+                <p className="text-xs text-gray-400 font-mono">
+                  {currentProvider?.name || 'Servidor Externo'} ({tmdbId})
+                </p>
               </div>
             </motion.div>
           )}
         </AnimatePresence>
 
         {/* Iframe Embed Player */}
-        {isValidId && !hasError && (
+        {isValidId && !isDirectVideo && !hasError && (
           <iframe
             ref={iframeRef}
             key={`${movie.id}-${retryCount}`}

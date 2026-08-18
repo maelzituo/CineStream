@@ -38,8 +38,9 @@ import {
   Smartphone
 } from 'lucide-react';
 import { UserProfile, PasswordValidationResult } from '../types';
-import { db } from '../lib/database';
 import { useAuth } from '../context/AuthContext';
+import AuthService from '../services/auth/authService';
+import { SecurityLogger } from '../lib/securityLogger';
 import { validatePassword } from '../lib/passwordUtils';
 import PasswordStrengthMeter from './auth/PasswordStrengthMeter';
 import AvatarPicker, { CINEMA_AVATARS } from './auth/AvatarPicker';
@@ -66,14 +67,18 @@ export default function Profile({
     openAuthModal,
     logout,
     updateProfile,
-    changePassword,
-    securityLogs,
-    refreshSecurityLogs
   } = useAuth();
+  
+  const [securityLogs, setSecurityLogs] = useState(() => user ? SecurityLogger.getLogs() : []);
+  const refreshSecurityLogs = () => {
+    if (user) {
+      setSecurityLogs(SecurityLogger.getLogs());
+    }
+  };
 
   // Estado do Perfil
   const [profileName, setProfileName] = useState(
-    user?.displayName || user?.email?.split('@')[0] || 'Usuário CineStream'
+    user?.name || user?.email?.split('@')[0] || 'Usuário CineStream'
   );
   const [profileAvatar, setProfileAvatar] = useState(
     user?.photoURL || CINEMA_AVATARS[0].url
@@ -95,19 +100,15 @@ export default function Profile({
   // Sincroniza usuário autenticado
   useEffect(() => {
     if (user) {
-      setProfileName(user.displayName || 'Usuário CineStream');
+      setProfileName(user.name || 'Usuário CineStream');
       setProfileAvatar(user.photoURL || CINEMA_AVATARS[0].url);
     }
   }, [user]);
 
   // Database status
-  const [dbStats, setDbStats] = useState(() => db.getDatabaseSize());
   const [dbStatusMessage, setDbStatusMessage] = useState<string | null>(null);
 
   useEffect(() => {
-    if (activeSheet === 'banco de dados') {
-      setDbStats(db.getDatabaseSize());
-    }
     if (activeSheet === 'seguranca') {
       refreshSecurityLogs();
       setPassError(null);
@@ -119,16 +120,14 @@ export default function Profile({
   }, [activeSheet, refreshSecurityLogs]);
 
   const handleResetDb = () => {
-    db.resetDatabase();
-    setDbStats(db.getDatabaseSize());
-    setDbStatusMessage('Banco de dados restaurado com sucesso!');
+    // Legacy support: We no longer have local database
+    setDbStatusMessage('Banco de dados em nuvem. Use a nuvem para gerenciar.');
     setTimeout(() => setDbStatusMessage(null), 3000);
   };
 
   const handleClearHistory = async () => {
-    await db.clearWatchHistory();
-    setDbStats(db.getDatabaseSize());
-    setDbStatusMessage('Histórico de reprodução limpo com sucesso!');
+    // Cloud based now
+    setDbStatusMessage('Use o suporte na nuvem.');
     setTimeout(() => setDbStatusMessage(null), 3000);
   };
 
@@ -182,7 +181,7 @@ export default function Profile({
 
     setPassChangeLoading(true);
     try {
-      await changePassword(currentPassword, newPassword);
+      await AuthService.changePassword(currentPassword, newPassword);
       setPassSuccess('Senha alterada com sucesso!');
       setCurrentPassword('');
       setNewPassword('');
@@ -287,7 +286,7 @@ export default function Profile({
             {/* Premium PRO Badge */}
             <div className="absolute bottom-1 right-1 bg-brand-red text-white px-3 py-1 rounded-full text-[10px] font-display font-black tracking-widest flex items-center gap-1 shadow-lg border border-white/10">
               <Verified className="w-3.5 h-3.5 fill-white/10" />
-              {user ? (user.providerId === 'google.com' ? 'GOOGLE PRO' : 'VIP PRO') : 'GUEST'}
+              {user ? (user.provider === 'google.com' ? 'GOOGLE PRO' : 'VIP PRO') : 'GUEST'}
             </div>
           </div>
 
@@ -311,7 +310,7 @@ export default function Profile({
               </button>
               <button
                 onClick={() => {
-                  setProfileName(user?.displayName || 'Usuário CineStream');
+                  setProfileName(user?.name || 'Usuário CineStream');
                   setIsEditingName(false);
                 }}
                 className="p-1.5 bg-white/10 hover:bg-white/15 text-white rounded-lg cursor-pointer active:scale-95 transition-all"
@@ -343,7 +342,7 @@ export default function Profile({
         <section className="grid grid-cols-3 gap-4">
           <div className="glass-panel rounded-xl p-4 text-center hover:bg-white/5 transition-colors">
             <p className="font-display font-black text-xl md:text-2xl text-brand-red">
-              {dbStats.watchHistoryCount}
+              -
             </p>
             <p className="font-display font-extrabold text-[9px] md:text-[10px] text-gray-400 tracking-wider mt-1 uppercase">
               Assistidos
@@ -359,7 +358,7 @@ export default function Profile({
           </div>
           <div className="glass-panel rounded-xl p-4 text-center hover:bg-white/5 transition-colors">
             <p className="font-display font-black text-xl md:text-2xl text-brand-red">
-              {dbStats.reviewsCount}
+              -
             </p>
             <p className="font-display font-extrabold text-[9px] md:text-[10px] text-gray-400 tracking-wider mt-1 uppercase">
               Avaliações
@@ -625,7 +624,7 @@ export default function Profile({
                       <div className="flex items-center justify-between">
                         <span className="text-xs text-gray-400 font-bold uppercase">Provedor de Acesso:</span>
                         <span className="text-xs font-mono font-bold text-emerald-400 bg-emerald-500/10 px-2.5 py-1 rounded-full">
-                          {user?.providerId === 'google.com' ? 'Google OAuth 2.0' : 'E-mail & Senha Criptografada'}
+                          {user?.provider === 'google.com' ? 'Google OAuth 2.0' : 'E-mail & Senha Criptografada'}
                         </span>
                       </div>
                       <div className="flex items-center justify-between">
@@ -637,7 +636,7 @@ export default function Profile({
                     </div>
 
                     {/* Formulário de Troca de Senha (apenas para provedor password) */}
-                    {user?.providerId !== 'google.com' && (
+                    {user?.provider !== 'google.com' && (
                       <div className="space-y-3 p-4 bg-surface/70 rounded-2xl border border-white/5">
                         <h4 className="text-xs font-display font-black text-white uppercase tracking-wider flex items-center gap-1.5">
                           <Lock className="w-3.5 h-3.5 text-brand-red" />
@@ -834,7 +833,7 @@ export default function Profile({
                     <div className="grid grid-cols-2 gap-3">
                       <div className="p-3.5 bg-white/5 rounded-xl border border-white/5 text-center">
                         <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider block mb-1">Tamanho Estimado</span>
-                        <span className="font-mono text-sm text-white font-bold">{dbStats.estimatedBytes} bytes</span>
+                        <span className="font-mono text-sm text-white font-bold">Nuvem (Firebase)</span>
                       </div>
                       <div className="p-3.5 bg-white/5 rounded-xl border border-white/5 text-center">
                         <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider block mb-1">Estabilidade</span>

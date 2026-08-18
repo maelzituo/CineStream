@@ -8,7 +8,8 @@ import Header from './components/Header';
 import Hero from './components/Hero';
 import MovieShelf from './components/MovieShelf';
 import MovieDetails from './components/MovieDetails';
-import MyList from './components/MyList';
+import MyList from "./components/MyList";
+import CustomLists from "./components/CustomLists";
 import Profile from './components/Profile';
 import Search from './components/Search';
 import VideoPlayer from './components/VideoPlayer';
@@ -20,8 +21,8 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import { Movie, Tab } from './types';
 import { MOVIES_DATABASE, INITIAL_SAVED_IDS } from './data/movies';
 import { Home, Search as SearchIcon, Bookmark, User, HardDrive, RefreshCw } from 'lucide-react';
-import { db, WatchHistoryEntry } from './lib/database';
-import { firestoreService } from './lib/firestoreService';
+import { useFavorites } from './hooks/useFavorites';
+import { useHistory } from './hooks/useHistory';
 import { fetchGoogleDriveMovies } from './lib/drive';
 import MovieRepository from './services/movieRepository';
 import SeriesRepository from './services/seriesRepository';
@@ -41,6 +42,12 @@ function CineStreamApp() {
 
   // Auth Context
   const { user, loading: authLoading, driveToken, loginWithGoogle, logout, openAuthModal } = useAuth();
+
+  // Firestore Hooks
+  const { favorites, addFavorite, removeFavorite } = useFavorites();
+  const { history: watchHistory, updateHistory } = useHistory();
+
+  const savedIds = useMemo(() => favorites.map(f => f.movieId), [favorites]);
 
   // Route Protection Effect: se deslogar enquanto estiver em área restrita
   useEffect(() => {
@@ -164,97 +171,7 @@ function CineStreamApp() {
   // Filme em execução no Player
   const [playingMovie, setPlayingMovie] = useState<Movie | null>(null);
 
-  // Histórico de reprodução
-  const [watchHistory, setWatchHistory] = useState<WatchHistoryEntry[]>([]);
-
-  // Lista de favoritos
-  const [savedIds, setSavedIds] = useState<string[]>([]);
-
-  // Load and Sync User Data
-  useEffect(() => {
-    let isMounted = true;
-
-    const syncUserData = async () => {
-      if (authLoading) return;
-
-      if (user) {
-        // User logged in: Load from Firestore
-        const [firestoreFavorites, firestoreHistory] = await Promise.all([
-          firestoreService.getFavorites(user.uid),
-          firestoreService.getWatchHistory(user.uid),
-        ]);
-
-        // Check if there's local data to migrate
-        const localFavoritesRaw = localStorage.getItem('cinestream_saved_ids');
-        let localFavorites: string[] = localFavoritesRaw ? JSON.parse(localFavoritesRaw) : [];
-        // Only migrate initial defaults if the user has NO favorites yet
-        if (localFavorites.length === 0 && firestoreFavorites.length === 0) {
-           localFavorites = INITIAL_SAVED_IDS;
-        }
-
-        const localHistory = await db.getWatchHistory();
-
-        const needsMigration = (localFavoritesRaw && localFavorites.length > 0) || localHistory.length > 0;
-
-        if (needsMigration) {
-          await firestoreService.migrateLocalDataToFirestore(user.uid, localFavorites, localHistory);
-          // Reload after migration
-          const [migratedFavs, migratedHist] = await Promise.all([
-            firestoreService.getFavorites(user.uid),
-            firestoreService.getWatchHistory(user.uid),
-          ]);
-          if (isMounted) {
-            setSavedIds(migratedFavs);
-            setWatchHistory(migratedHist);
-          }
-          // Clear local storage after successful migration
-          localStorage.removeItem('cinestream_saved_ids');
-          await db.clearWatchHistory();
-        } else {
-          if (isMounted) {
-            setSavedIds(firestoreFavorites);
-            setWatchHistory(firestoreHistory);
-          }
-        }
-      } else {
-        // Guest mode: Load from local storage
-        const cached = localStorage.getItem('cinestream_saved_ids');
-        const localFavs = cached ? JSON.parse(cached) : INITIAL_SAVED_IDS;
-        const localHist = await db.getWatchHistory();
-        
-        if (isMounted) {
-          setSavedIds(localFavs);
-          setWatchHistory(localHist);
-        }
-      }
-    };
-
-    syncUserData();
-
-    return () => {
-      isMounted = false;
-    };
-  }, [user, authLoading]);
-
-  useEffect(() => {
-    if (!user) {
-      localStorage.setItem('cinestream_saved_ids', JSON.stringify(savedIds));
-    }
-  }, [savedIds, user]);
-
-  const loadWatchHistory = async () => {
-    if (user) {
-      const history = await firestoreService.getWatchHistory(user.uid);
-      setWatchHistory(history);
-    } else {
-      const history = await db.getWatchHistory();
-      setWatchHistory(history);
-    }
-  };
-
-  useEffect(() => {
-    loadWatchHistory();
-  }, [playingMovie]);
+  // Histórico de reprodução já inicializado nos hooks acima
 
   const handlePlayMovie = async (movie: Movie) => {
     setPlayingMovie(movie);
@@ -262,37 +179,36 @@ function CineStreamApp() {
     // Record history
     const defaultDuration = 7200; // 2 hours
     const defaultSeconds = 600; // Mark as 10 minutes watched so it shows progress
+    const progress = Math.round((defaultSeconds / defaultDuration) * 100);
 
     if (user) {
-      await firestoreService.updateWatchProgress(user.uid, movie.id, defaultSeconds, defaultDuration);
-    } else {
-      await db.updateWatchProgress(movie.id, defaultSeconds, defaultDuration);
+      await updateHistory(movie.id, progress, defaultSeconds);
     }
-    loadWatchHistory();
   };
 
   const handleSavedToggle = async (movie: Movie) => {
     const isSaved = savedIds.includes(movie.id);
     
-    // Optimistic UI Update
-    setSavedIds((prev) => {
-      if (isSaved) return prev.filter((id) => id !== movie.id);
-      return [...prev, movie.id];
-    });
-
     if (user) {
       if (isSaved) {
-        await firestoreService.removeFavorite(user.uid, movie.id);
+        await removeFavorite(movie.id);
       } else {
-        await firestoreService.addFavorite(user.uid, movie.id);
+        await addFavorite({
+          movieId: movie.id,
+          title: movie.title,
+          poster: movie.imageUrl,
+          backdrop: movie.backdropUrl,
+          type: movie.type || 'movie'
+        });
       }
+    } else {
+      openAuthModal('login');
     }
   };
 
   const handleRemoveFromList = async (movie: Movie) => {
-    setSavedIds((prev) => prev.filter((id) => id !== movie.id));
     if (user) {
-      await firestoreService.removeFavorite(user.uid, movie.id);
+      await removeFavorite(movie.id);
     }
   };
 
@@ -302,7 +218,6 @@ function CineStreamApp() {
 
   const handleBackFromDetails = () => {
     setMovieHistory((prev) => prev.slice(0, -1));
-    loadWatchHistory();
   };
 
   const handleNavigateToMovieInDetails = (movie: Movie) => {
@@ -317,7 +232,6 @@ function CineStreamApp() {
     setMovieHistory([]);
     setCurrentTab(tab);
     window.scrollTo({ top: 0, behavior: 'smooth' });
-    loadWatchHistory();
   };
 
   // Combina todos os catálogos (TMDb + Banco Local + Google Drive)
@@ -613,12 +527,16 @@ function CineStreamApp() {
 
             {/* Aba Minha Lista */}
             {currentTab === 'lista' && (
-              <MyList
-                savedMovies={savedMovies}
-                onMovieClick={handleMovieSelect}
-                onRemoveFromList={handleRemoveFromList}
-                onNavigateHome={() => handleTabChange('inicio')}
-              />
+              <div className="min-h-screen bg-brand-bg pt-24 px-6 md:px-16 pb-32 space-y-12 animate-in fade-in zoom-in-95 duration-300">
+                <CustomLists onNavigateToMovie={handleMovieSelect} />
+                <div className="border-t border-white/10" />
+                <MyList
+                  savedMovies={savedMovies}
+                  onMovieClick={handleMovieSelect}
+                  onRemoveFromList={handleRemoveFromList}
+                  onNavigateHome={() => handleTabChange('inicio')}
+                />
+              </div>
             )}
 
             {/* Aba Perfil */}
@@ -649,7 +567,13 @@ function CineStreamApp() {
 
       {/* Player de Vídeo em Tela Cheia */}
       {playingMovie && (
-        <VideoPlayer movie={playingMovie} onClose={() => setPlayingMovie(null)} />
+        <VideoPlayer 
+          movie={playingMovie} 
+          onClose={() => setPlayingMovie(null)} 
+          onProgressUpdate={(progress, seconds) => {
+            if (user) updateHistory(playingMovie.id, progress, seconds);
+          }}
+        />
       )}
 
       {/* Modal Universal de Autenticação */}

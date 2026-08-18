@@ -10,18 +10,19 @@ import { Movie } from '../types';
 interface VideoPlayerProps {
   movie: Movie;
   onClose: () => void;
+  onProgressUpdate?: (progress: number, seconds: number) => void;
 }
 
 /**
  * Componente Wrapper VideoPlayer - Redireciona para o MoviePlayer ou SeriesPlayer
  * com base no tipo do conteúdo (filme ou série) e gerencia o player da EmbedMovies.
  */
-export default function VideoPlayer({ movie, onClose }: VideoPlayerProps) {
+export default function VideoPlayer({ movie, onClose, onProgressUpdate }: VideoPlayerProps) {
   // Caso seja uma série, abre o SeriesPlayer com seleção de temporadas/episódios
   if (movie.type === 'series') {
-    return <SeriesPlayer movie={movie} onClose={onClose} />;
+    return <SeriesPlayer movie={movie} onClose={onClose} onProgressUpdate={onProgressUpdate} />;
   }
 
   // Por padrão, abre o MoviePlayer para filmes
-  return <MoviePlayer movie={movie} onClose={onClose} />;
+  return <MoviePlayer movie={movie} onClose={onClose} onProgressUpdate={onProgressUpdate} />;
 }

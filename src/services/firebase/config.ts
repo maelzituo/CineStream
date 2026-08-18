@@ -1,14 +1,8 @@
-/**
- * @license
- * SPDX-License-Identifier: Apache-2.0
- */
-
 import { initializeApp, getApps, getApp, FirebaseApp } from 'firebase/app';
 import { getAuth, Auth, setPersistence, browserLocalPersistence } from 'firebase/auth';
-import { getFirestore, Firestore } from 'firebase/firestore';
-import fallbackConfig from '../../firebase-applet-config.json';
+import { getFirestore, Firestore, enableIndexedDbPersistence, initializeFirestore, persistentLocalCache, persistentMultipleTabManager } from 'firebase/firestore';
+import fallbackConfig from '../../../firebase-applet-config.json';
 
-// Configuração flexível: suporta variáveis de ambiente VITE_FIREBASE_* com fallback para o arquivo local
 const rawEnv = (typeof import.meta !== 'undefined' && (import.meta as any).env) || {};
 const safeFallback = (fallbackConfig || {}) as Record<string, string | undefined>;
 
@@ -23,23 +17,26 @@ const firebaseConfig = {
   firestoreDatabaseId: safeFallback.firestoreDatabaseId,
 };
 
-export const firebaseApp: FirebaseApp =
-  getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
+export const app: FirebaseApp = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
+export const auth: Auth = getAuth(app);
 
-export const auth: Auth = getAuth(firebaseApp);
-
-// Persistência local segura para produção
+// Persistência automática da sessão (Auth)
 setPersistence(auth, browserLocalPersistence).catch((err) => {
-  console.warn('Persistência de sessão Firebase configurada:', err);
+  console.warn('Persistência de sessão Auth configurada:', err);
 });
 
-let firestoreInstance: Firestore | null = null;
+// Inicialização do Firestore com Persistência Offline
+let firestoreInstance: Firestore;
+
 try {
-  firestoreInstance = firebaseConfig.firestoreDatabaseId 
-    ? getFirestore(firebaseApp, firebaseConfig.firestoreDatabaseId)
-    : getFirestore(firebaseApp);
+  firestoreInstance = initializeFirestore(app, {
+    localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() })
+  }, firebaseConfig.firestoreDatabaseId);
 } catch (e) {
-  console.warn('Firestore fallback:', e);
+  // Fallback caso initializeFirestore já tenha sido chamado ou dê erro
+  firestoreInstance = firebaseConfig.firestoreDatabaseId 
+    ? getFirestore(app, firebaseConfig.firestoreDatabaseId)
+    : getFirestore(app);
 }
 
-export const firestoreDb = firestoreInstance;
+export const db = firestoreInstance;

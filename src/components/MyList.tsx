@@ -27,7 +27,7 @@ export default function MyList({
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       transition={{ duration: 0.4 }}
-      className="min-h-screen bg-brand-bg pt-24 px-6 md:px-16 pb-32 select-none"
+      className="  select-none"
     >
       {/* Page Header */}
       <section className="mb-8">
