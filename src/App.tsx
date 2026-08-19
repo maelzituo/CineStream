@@ -671,7 +671,14 @@ function CineStreamApp() {
   );
 }
 
+import PrivacyPolicy from './pages/PrivacyPolicy';
+
 export default function App() {
+  // Roteamento simples baseado na URL para permitir acesso público à Política de Privacidade
+  if (window.location.pathname === '/politica-de-privacidade') {
+    return <PrivacyPolicy />;
+  }
+
   return (
     <AuthProvider>
       <CineStreamApp />

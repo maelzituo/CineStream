@@ -158,19 +158,24 @@ export default function SeriesPlayer({ movie, onClose, onProgressUpdate }: Serie
         <div className="flex flex-wrap items-center gap-2 md:gap-3 w-full sm:w-auto justify-between sm:justify-end">
           {/* Seletor de Servidor */}
           {isValidId && (
-            <div className="relative">
-              <select
-                value={selectedProviderIndex}
-                onChange={(e) => setSelectedProviderIndex(Number(e.target.value))}
-                className="appearance-none bg-black/60 border border-white/20 text-white text-xs rounded-lg pl-3 pr-8 py-2 md:py-2.5 focus:outline-none focus:border-brand-red cursor-pointer"
-              >
-                {EmbedService.PROVIDERS.map((provider, index) => (
-                  <option key={provider.id} value={index}>
-                    {provider.name}
-                  </option>
-                ))}
-              </select>
-              <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+            <div className="flex flex-col items-end gap-1">
+              <div className="relative">
+                <select
+                  value={selectedProviderIndex}
+                  onChange={(e) => setSelectedProviderIndex(Number(e.target.value))}
+                  className="appearance-none bg-black/60 border border-white/20 text-white text-xs rounded-lg pl-3 pr-8 py-2 md:py-2.5 focus:outline-none focus:border-brand-red cursor-pointer"
+                >
+                  {EmbedService.PROVIDERS.map((provider, index) => (
+                    <option key={provider.id} value={index}>
+                      {provider.name}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+              </div>
+              <span className="text-[10px] text-gray-300 font-sans hidden md:block bg-black/60 px-2 py-1 rounded border border-white/10">
+                Sem áudio PT-BR? Tente outro servidor no menu acima.
+              </span>
             </div>
           )}
 

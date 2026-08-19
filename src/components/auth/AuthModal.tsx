@@ -631,9 +631,18 @@ export default function AuthModal() {
         )}
 
         {/* Rodapé de Segurança e Criptografia */}
-        <div className="pt-5 mt-2 border-t border-white/5 flex items-center justify-center gap-1.5 text-[10px] text-gray-500 font-sans">
-          <ShieldCheck className="w-3.5 h-3.5 text-emerald-500" />
-          <span>Protegido por Criptografia SSL 256-bit & Auth Firebase</span>
+        <div className="pt-5 mt-2 border-t border-white/5 flex flex-col items-center justify-center gap-2 text-[10px] text-gray-500 font-sans text-center">
+          <div className="flex items-center gap-1.5">
+            <ShieldCheck className="w-3.5 h-3.5 text-emerald-500" />
+            <span>Protegido por Criptografia SSL 256-bit & Auth Firebase</span>
+          </div>
+          <p>
+            Ao continuar, você concorda com nossa{' '}
+            <a href="/politica-de-privacidade" className="text-brand-red hover:text-white transition-colors">
+              Política de Privacidade
+            </a>
+            .
+          </p>
         </div>
       </motion.div>
     </div>

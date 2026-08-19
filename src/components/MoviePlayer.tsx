@@ -37,8 +37,8 @@ export default function MoviePlayer({ movie, onClose, onProgressUpdate }: MovieP
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isLandscape, setIsLandscape] = useState(false);
 
-  // Verifica se o filme possui um link de vídeo direto (ex: Google Drive)
-  const isDirectVideo = !!movie.videoUrl;
+  // Verifica se o filme possui um link de vídeo direto (ex: Google Drive). Ignora links do YouTube (trailers).
+  const isDirectVideo = !!movie.videoUrl && !movie.videoUrl.includes('youtube.com');
 
   // Verifica se o filme possui um TMDb ID válido
   const tmdbId = movie.tmdbId;
@@ -152,19 +152,23 @@ export default function MoviePlayer({ movie, onClose, onProgressUpdate }: MovieP
         <div className="flex items-center gap-2 md:gap-3">
           {/* Seletor de Servidor */}
           {isValidId && !isDirectVideo && (
-            <select
-              value={selectedProviderIndex}
-              onChange={(e) => setSelectedProviderIndex(Number(e.target.value))}
-              className="bg-black/60 border border-white/20 text-white text-xs rounded-lg px-2 py-2 md:px-3 focus:outline-none focus:border-brand-red cursor-pointer"
-            >
-              {EmbedService.PROVIDERS.map((provider, index) => (
-                <option key={provider.id} value={index}>
-                  {provider.name}
-                </option>
-              ))}
-            </select>
+            <div className="flex flex-col items-end gap-1">
+              <select
+                value={selectedProviderIndex}
+                onChange={(e) => setSelectedProviderIndex(Number(e.target.value))}
+                className="bg-black/60 border border-white/20 text-white text-xs rounded-lg px-2 py-2 md:px-3 focus:outline-none focus:border-brand-red cursor-pointer"
+              >
+                {EmbedService.PROVIDERS.map((provider, index) => (
+                  <option key={provider.id} value={index}>
+                    {provider.name}
+                  </option>
+                ))}
+              </select>
+              <span className="text-[10px] text-gray-300 font-sans hidden md:block bg-black/60 px-2 py-1 rounded border border-white/10">
+                Sem áudio PT-BR? Tente outro servidor no menu acima.
+              </span>
+            </div>
           )}
-
           {/* Rotação / Orientação */}
           <button
             onClick={toggleOrientation}

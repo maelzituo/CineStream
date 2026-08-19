@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-export type ProviderId = 'vidsrcto' | 'cdnembed' | 'vidsrcme';
+export type ProviderId = 'autoembed' | 'vidsrcin' | 'vidsrcpm';
 
 export interface EmbedProvider {
   id: ProviderId;
@@ -18,22 +18,22 @@ export interface EmbedProvider {
 export class EmbedService {
   public static readonly PROVIDERS: EmbedProvider[] = [
     {
-      id: 'vidsrcto',
-      name: 'VidSrc.to (Servidor Principal)',
-      getMovieUrl: (id) => `https://vidsrc.to/embed/movie/${id}`,
-      getSeriesUrl: (id, s, e) => `https://vidsrc.to/embed/tv/${id}/${s}/${e}`
+      id: 'autoembed',
+      name: 'AutoEmbed (Servidor Principal - Sem Anúncios)',
+      getMovieUrl: (id) => `https://autoembed.co/movie/tmdb/${id}`,
+      getSeriesUrl: (id, s, e) => `https://autoembed.co/tv/tmdb/${id}-${s}-${e}`
     },
     {
-      id: 'cdnembed',
-      name: 'CDN Embed (Servidor Secundário)',
-      getMovieUrl: (id) => `https://cdn-embed.com/filme/${id}`,
-      getSeriesUrl: (id, s, e) => `https://cdn-embed.com/serie/${id}/${s}/${e}`
+      id: 'vidsrcin',
+      name: 'VidSrc.in (Servidor Secundário)',
+      getMovieUrl: (id) => `https://vidsrc.in/embed/movie?tmdb=${id}`,
+      getSeriesUrl: (id, s, e) => `https://vidsrc.in/embed/tv?tmdb=${id}&season=${s}&episode=${e}`
     },
     {
-      id: 'vidsrcme',
-      name: 'VidSrc ME (Servidor Alternativo)',
-      getMovieUrl: (id) => `https://vidsrc.me/embed/movie?tmdb=${id}`,
-      getSeriesUrl: (id, s, e) => `https://vidsrc.me/embed/tv?tmdb=${id}&season=${s}&episode=${e}`
+      id: 'vidsrcpm',
+      name: 'VidSrc PM (Servidor Alternativo)',
+      getMovieUrl: (id) => `https://vidsrc.pm/embed/movie?tmdb=${id}`,
+      getSeriesUrl: (id, s, e) => `https://vidsrc.pm/embed/tv?tmdb=${id}&season=${s}&episode=${e}`
     }
   ];
 
